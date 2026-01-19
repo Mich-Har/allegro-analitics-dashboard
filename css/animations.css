@@ -1,0 +1,434 @@
+/* ===========================================
+   ALLEGRO ANALYTICS DASHBOARD - ANIMATIONS
+   Keyframes, Transitions, Effects
+   =========================================== */
+
+/* ===== KEYFRAMES ===== */
+
+/* Fade In */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade Out */
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Slide Down */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    max-height: 2000px;
+    transform: translateY(0);
+  }
+}
+
+/* Slide Up */
+@keyframes slideUp {
+  from {
+    opacity: 1;
+    max-height: 2000px;
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+  }
+}
+
+/* Slide In Right */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Slide Out Right */
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+/* Scale In */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Pulse */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Rotate */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Float */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.1);
+  }
+}
+
+/* Shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Count Up (dla JS) */
+@keyframes countUp {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Bar Grow */
+@keyframes barGrow {
+  from {
+    width: 0;
+  }
+}
+
+/* Donut Draw */
+@keyframes donutDraw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Toast Slide In */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Toast Slide Out */
+@keyframes toastSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* ===== ANIMATION CLASSES ===== */
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.3s ease-out forwards;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  overflow: hidden;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  overflow: hidden;
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.3s ease-out forwards;
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-rotate {
+  animation: rotate 1s linear infinite;
+}
+
+.animate-float {
+  animation: float 20s ease-in-out infinite;
+}
+
+/* ===== STAGGERED ANIMATIONS ===== */
+
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* ===== HOVER EFFECTS ===== */
+
+.hover-lift {
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-strong);
+}
+
+.hover-glow {
+  transition: box-shadow var(--transition-normal);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--shadow-glow);
+}
+
+.hover-scale {
+  transition: transform var(--transition-normal);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* ===== LOADING STATES ===== */
+
+.loading {
+  pointer-events: none;
+  position: relative;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn.loading .icon {
+  animation: rotate 1s linear infinite;
+}
+
+/* ===== TRANSITION UTILITIES ===== */
+
+.transition-all {
+  transition: all var(--transition-normal);
+}
+
+.transition-colors {
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.transition-transform {
+  transition: transform var(--transition-normal);
+}
+
+.transition-opacity {
+  transition: opacity var(--transition-normal);
+}
+
+/* ===== TOAST ANIMATIONS ===== */
+
+.toast {
+  animation: toastSlideIn 0.4s ease-out forwards;
+}
+
+.toast.removing {
+  animation: toastSlideOut 0.3s ease-out forwards;
+}
+
+/* ===== CHART ANIMATIONS ===== */
+
+.bar-animated {
+  animation: barGrow 0.8s ease-out forwards;
+}
+
+.bar-animated.stagger-1 { animation-delay: 0s; }
+.bar-animated.stagger-2 { animation-delay: 0.1s; }
+.bar-animated.stagger-3 { animation-delay: 0.2s; }
+.bar-animated.stagger-4 { animation-delay: 0.3s; }
+.bar-animated.stagger-5 { animation-delay: 0.4s; }
+
+.donut-segment {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: donutDraw 1s ease-out forwards;
+}
+
+/* ===== BACKGROUND PARTICLES ===== */
+
+.particle {
+  animation: float 20s ease-in-out infinite;
+}
+
+.particle:nth-child(1) {
+  animation-delay: 0s;
+  animation-duration: 25s;
+}
+
+.particle:nth-child(2) {
+  animation-delay: -5s;
+  animation-duration: 20s;
+}
+
+.particle:nth-child(3) {
+  animation-delay: -10s;
+  animation-duration: 30s;
+}
+
+.particle:nth-child(4) {
+  animation-delay: -15s;
+  animation-duration: 22s;
+}
+
+.particle:nth-child(5) {
+  animation-delay: -8s;
+  animation-duration: 28s;
+}
+
+/* ===== NUMBER COUNTING ===== */
+
+.count-up {
+  display: inline-block;
+}
+
+/* ===== EXPAND/COLLAPSE ===== */
+
+.collapsible {
+  overflow: hidden;
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 0.3s ease,
+              padding 0.3s ease;
+}
+
+.collapsible.open {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+/* ===== RIPPLE EFFECT ===== */
+
+.ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, var(--primary) 10%, transparent 10%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10, 10);
+  opacity: 0;
+  transition: transform 0.5s, opacity 1s;
+}
+
+.ripple:active::after {
+  transform: scale(0, 0);
+  opacity: 0.3;
+  transition: 0s;
+}
+
+/* ===== INITIAL LOAD SEQUENCE ===== */
+
+.initial-hidden {
+  opacity: 0;
+}
+
+.loaded .header {
+  animation: slideDown 0.6s ease-out forwards;
+}
+
+.loaded .kpi-card {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.loaded .chart-container {
+  animation: fadeIn 0.6s ease-out forwards;
+  animation-delay: 0.3s;
+}
+
+.loaded .table-section {
+  animation: fadeIn 0.6s ease-out forwards;
+  animation-delay: 0.5s;
+}
+
+/* ===== REFRESH ANIMATION ===== */
+
+.refreshing .content-section {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.refresh-icon.spinning {
+  animation: rotate 1s linear infinite;
+}

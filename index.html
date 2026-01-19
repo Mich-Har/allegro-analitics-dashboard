@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Allegro Analytics Dashboard</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+  <!-- Background Particles -->
+  <div class="particles"></div>
+
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="spinner"></div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Side Panel -->
+  <div class="side-panel-overlay"></div>
+  <div class="side-panel"></div>
+
+  <!-- Main Dashboard -->
+  <div class="dashboard">
+    <!-- Header -->
+    <header id="header" class="header">
+      <!-- Renderowane przez JS -->
+    </header>
+
+    <!-- KPI Cards -->
+    <section class="kpi-grid" id="kpiGrid">
+      <!-- Renderowane przez JS -->
+    </section>
+
+    <!-- Charts Section -->
+    <section class="charts-section">
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3 class="chart-title">🏆 Top 5 Produktow - Sprzedaz</h3>
+        </div>
+        <div id="barChart" class="chart-content">
+          <!-- Renderowane przez JS -->
+        </div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-header">
+          <h3 class="chart-title">🌍 Sprzedaz per Rynek</h3>
+        </div>
+        <div id="donutChart" class="chart-content">
+          <!-- Renderowane przez JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Products Table -->
+    <section class="table-section">
+      <div class="table-header">
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <h2 class="table-title" style="margin: 0;">📦 Produkty</h2>
+          <div class="search-box">
+            <input type="text" id="productSearch" placeholder="Szukaj po nazwie lub sygnaturze..."
+                   style="width: 280px; padding: 6px 12px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-primary); font-size: 13px;">
+          </div>
+        </div>
+        <div class="table-controls">
+          <button id="collapseAllBtn" class="btn btn-secondary" style="white-space: nowrap; padding: 6px 12px; font-size: 13px;">
+            Zwin wszystko
+          </button>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <div id="productsTable">
+          <!-- Renderowane przez JS -->
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

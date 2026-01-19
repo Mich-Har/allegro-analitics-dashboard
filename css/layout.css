@@ -1,0 +1,404 @@
+/* ===========================================
+   ALLEGRO ANALYTICS DASHBOARD - LAYOUT
+   Grid, Flexbox, Responsywnosc
+   =========================================== */
+
+/* ===== RESET & BASE ===== */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  line-height: 1.6;
+  color: var(--text-primary);
+  background-color: var(--bg-dark);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== MAIN CONTAINER ===== */
+.dashboard {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-l);
+  position: relative;
+  z-index: var(--z-content);
+}
+
+/* ===== HEADER ===== */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header);
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-color);
+  padding: var(--space-l) var(--space-xl);
+  margin: calc(-1 * var(--space-l));
+  margin-bottom: var(--space-xl);
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-m);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-m);
+}
+
+.header-meta {
+  font-size: var(--font-size-small);
+  color: var(--text-muted);
+}
+
+/* ===== KPI CARDS GRID ===== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-l);
+  margin-bottom: var(--space-xl);
+}
+
+/* ===== CHARTS SECTION ===== */
+.charts-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-l);
+  margin-bottom: var(--space-xl);
+}
+
+.chart-container {
+  background: var(--bg-card);
+  border-radius: var(--radius-l);
+  padding: var(--space-l);
+  border: 1px solid var(--border-color);
+  min-height: 400px;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-l);
+  padding-bottom: var(--space-m);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.chart-title {
+  font-size: var(--font-size-h3);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+}
+
+/* ===== TABLE SECTION ===== */
+.table-section {
+  background: var(--bg-card);
+  border-radius: var(--radius-l);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-l);
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+  gap: var(--space-m);
+}
+
+.table-title {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-semibold);
+}
+
+.table-controls {
+  display: flex;
+  gap: var(--space-s);
+  flex-wrap: wrap;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* ===== PRODUCTS TABLE ===== */
+.products-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.products-table th,
+.products-table td {
+  padding: var(--space-m);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.products-table th {
+  background: var(--bg-card-hover);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-small);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.products-table th:hover {
+  background: var(--border-light);
+}
+
+.products-table th .sort-icon {
+  margin-left: var(--space-xs);
+  opacity: 0.5;
+}
+
+.products-table th.sorted .sort-icon {
+  opacity: 1;
+  color: var(--primary);
+}
+
+.products-table tbody tr.product-row {
+  transition: background-color var(--transition-fast);
+  cursor: pointer;
+}
+
+.products-table tbody tr.product-row:hover {
+  background: var(--bg-card-hover);
+}
+
+.products-table tbody tr.product-row.expanded {
+  background: var(--bg-card-hover);
+}
+
+.products-table tbody tr.product-row.product-inactive {
+  opacity: 0.5;
+}
+
+.products-table tbody tr.product-row.product-inactive:hover {
+  opacity: 0.7;
+}
+
+/* ===== EXPANDED ROW (AUKCJE) ===== */
+.expanded-content {
+  background: var(--bg-dark);
+  border-bottom: 1px solid var(--border-color);
+  cursor: default;
+}
+
+.expanded-content:hover {
+  background: var(--bg-dark);
+}
+
+.expanded-inner {
+  padding: var(--space-l);
+}
+
+.auction-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+.auction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-s) var(--space-m);
+  background: var(--bg-dark);
+  border-radius: var(--radius-s);
+  border-left: 3px solid var(--primary);
+  gap: var(--space-m);
+}
+
+/* ===== SIDE PANEL (MARKET DETAILS) ===== */
+.side-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 400px;
+  max-width: 90vw;
+  height: 100vh;
+  background: var(--bg-card);
+  border-left: 1px solid var(--border-color);
+  z-index: var(--z-modal);
+  transform: translateX(100%);
+  transition: transform var(--transition-slow);
+  overflow-y: auto;
+}
+
+.side-panel.open {
+  transform: translateX(0);
+}
+
+.side-panel-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  z-index: calc(var(--z-modal) - 1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-normal);
+}
+
+.side-panel-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.side-panel-header {
+  padding: var(--space-l);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.side-panel-content {
+  padding: var(--space-l);
+}
+
+/* ===== TOAST NOTIFICATIONS ===== */
+.toast-container {
+  position: fixed;
+  top: var(--space-l);
+  right: var(--space-l);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-s);
+}
+
+/* ===== LOADING STATE ===== */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-overlay);
+}
+
+/* ===== RESPONSYWNOSC ===== */
+
+/* Tablet (768px - 1199px) */
+@media (max-width: 1199px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  .dashboard {
+    padding: var(--space-m);
+  }
+
+  .header {
+    padding: var(--space-m);
+    margin: calc(-1 * var(--space-m));
+    margin-bottom: var(--space-l);
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .table-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .products-table th,
+  .products-table td {
+    padding: var(--space-s);
+    font-size: var(--font-size-small);
+  }
+
+  .side-panel {
+    width: 100%;
+  }
+
+  .auction-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
+
+/* ===== BACKGROUND PARTICLES ===== */
+.particles {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-background);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.3;
+}
