@@ -10,7 +10,7 @@ const CONFIG = {
 
   // Timeout sesji w minutach (po tym czasie bez aktywnosci wymaga ponownego logowania)
   // Ustaw na mala wartosc (np. 1) do testow
-  SESSION_TIMEOUT_MINUTES: 1,
+  SESSION_TIMEOUT_MINUTES: 30,
 
   // Jak czesto sprawdzac timeout (w sekundach)
   SESSION_CHECK_INTERVAL_SECONDS: 60,
