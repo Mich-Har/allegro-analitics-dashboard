@@ -192,6 +192,12 @@ function renderCharts(topProducts, markets) {
 function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', searchQuery = '') {
   const container = document.getElementById('productsTable');
 
+  // Aktualizuj licznik produktow w naglowku
+  const tableTitle = document.querySelector('.table-title');
+  if (tableTitle) {
+    tableTitle.textContent = `📦 Produkty (${products.length})`;
+  }
+
   // Filtruj produkty po wyszukiwaniu
   const filteredProducts = searchQuery
     ? products.filter(p => {
@@ -604,6 +610,7 @@ function attachLoginListeners() {
 
       if (isValid) {
         setAuth(true);
+        updateLastActivity();
         location.reload();
       } else {
         errorMsg.textContent = 'Nieprawidlowe haslo';

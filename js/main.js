@@ -21,9 +21,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  // Sprawdz czy sesja nie wygasla
+  if (checkSessionTimeout()) {
+    return; // Uzytkownik zostal wylogowany
+  }
+
   // Uzytkownik zalogowany - zaladuj dashboard
   await initDashboard();
+
+  // Uruchom sledzenie aktywnosci i timeout
+  startActivityTracking();
+  startSessionTimeoutCheck();
 });
+
+/**
+ * Uruchamia sledzenie aktywnosci uzytkownika (klikniecia)
+ */
+function startActivityTracking() {
+  // Ustaw poczatkowa aktywnosc
+  updateLastActivity();
+
+  // Sluchaj klikniec na calym dokumencie
+  document.addEventListener('click', () => {
+    updateLastActivity();
+  });
+}
 
 /**
  * Inicjalizuje dashboard (po autoryzacji)

@@ -50,5 +50,62 @@ function setAuth(value) {
  */
 function logout() {
   sessionStorage.removeItem('authenticated');
+  sessionStorage.removeItem('lastActivity');
   location.reload();
+}
+
+// ============================================
+// SESSION TIMEOUT
+// ============================================
+
+/**
+ * Aktualizuje timestamp ostatniej aktywnosci
+ */
+function updateLastActivity() {
+  sessionStorage.setItem('lastActivity', Date.now().toString());
+}
+
+/**
+ * Pobiera timestamp ostatniej aktywnosci
+ * @returns {number|null}
+ */
+function getLastActivity() {
+  const timestamp = sessionStorage.getItem('lastActivity');
+  return timestamp ? parseInt(timestamp, 10) : null;
+}
+
+/**
+ * Sprawdza czy sesja wygasla
+ * @returns {boolean} - true jesli sesja wygasla
+ */
+function isSessionExpired() {
+  const lastActivity = getLastActivity();
+  if (!lastActivity) return false;
+
+  const now = Date.now();
+  const timeoutMs = CONFIG.SESSION_TIMEOUT_MINUTES * 60 * 1000;
+  return (now - lastActivity) > timeoutMs;
+}
+
+/**
+ * Sprawdza timeout i wylogowuje jesli sesja wygasla
+ * @returns {boolean} - true jesli sesja wygasla i uzytkownik zostal wylogowany
+ */
+function checkSessionTimeout() {
+  if (checkAuth() && isSessionExpired()) {
+    console.log('Sesja wygasla - wylogowanie');
+    logout();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Uruchamia okresowe sprawdzanie timeout sesji
+ */
+function startSessionTimeoutCheck() {
+  const intervalMs = CONFIG.SESSION_CHECK_INTERVAL_SECONDS * 1000;
+  setInterval(() => {
+    checkSessionTimeout();
+  }, intervalMs);
 }
