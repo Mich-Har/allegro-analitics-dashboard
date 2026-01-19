@@ -639,3 +639,104 @@
 .search-input input {
   padding-left: var(--space-xl);
 }
+
+/* ===== LOGIN SCREEN ===== */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-l);
+}
+
+.login-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-l);
+  padding: var(--space-xxl);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+  box-shadow: var(--shadow-strong);
+  animation: fadeIn 0.5s ease-out;
+}
+
+.login-logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-m);
+  margin-bottom: var(--space-l);
+}
+
+.login-logo .logo-icon {
+  width: 64px;
+  height: 64px;
+  font-size: 32px;
+}
+
+.login-logo h1 {
+  font-size: var(--font-size-h2);
+  font-weight: var(--font-weight-bold);
+  margin: 0;
+}
+
+.login-subtitle {
+  color: var(--text-secondary);
+  margin-bottom: var(--space-l);
+  font-size: var(--font-size-body);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-m);
+}
+
+.login-input {
+  width: 100%;
+  padding: var(--space-m) var(--space-l);
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-s);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-body);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  box-sizing: border-box;
+}
+
+.login-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.login-input::placeholder {
+  color: var(--text-muted);
+}
+
+.login-btn {
+  width: 100%;
+  padding: var(--space-m) var(--space-l);
+  font-size: var(--font-size-body);
+}
+
+.login-error {
+  color: var(--danger);
+  font-size: var(--font-size-small);
+  min-height: 20px;
+  margin-top: var(--space-s);
+  margin-bottom: 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

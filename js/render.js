@@ -539,3 +539,83 @@ function renderError(message) {
     </div>
   `;
 }
+
+/**
+ * Renderuje ekran logowania
+ */
+function renderLoginScreen() {
+  document.body.innerHTML = `
+    <div class="particles"></div>
+    <div class="login-container">
+      <div class="login-box">
+        <div class="login-logo">
+          <div class="logo-icon animate-pulse">📊</div>
+          <h1 class="title-gradient">Allegro Analytics</h1>
+        </div>
+        <p class="login-subtitle">Wprowadz haslo dostepu</p>
+        <form id="loginForm" class="login-form">
+          <input
+            type="password"
+            id="passwordInput"
+            class="login-input"
+            placeholder="Haslo"
+            autocomplete="current-password"
+            autofocus
+          >
+          <button type="submit" id="loginBtn" class="btn btn-primary login-btn">
+            Zaloguj
+          </button>
+        </form>
+        <p id="errorMsg" class="login-error"></p>
+      </div>
+    </div>
+  `;
+
+  // Utworz particles
+  createParticles();
+}
+
+/**
+ * Podlacza eventy do ekranu logowania
+ */
+function attachLoginListeners() {
+  const form = document.getElementById('loginForm');
+  const passwordInput = document.getElementById('passwordInput');
+  const errorMsg = document.getElementById('errorMsg');
+  const loginBtn = document.getElementById('loginBtn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const password = passwordInput.value;
+
+    if (!password) {
+      errorMsg.textContent = 'Wprowadz haslo';
+      return;
+    }
+
+    // Disable button podczas weryfikacji
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Weryfikacja...';
+    errorMsg.textContent = '';
+
+    try {
+      const isValid = await verifyPassword(password);
+
+      if (isValid) {
+        setAuth(true);
+        location.reload();
+      } else {
+        errorMsg.textContent = 'Nieprawidlowe haslo';
+        passwordInput.value = '';
+        passwordInput.focus();
+      }
+    } catch (error) {
+      console.error('Blad weryfikacji:', error);
+      errorMsg.textContent = 'Wystapil blad. Sprobuj ponownie.';
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'Zaloguj';
+    }
+  });
+}

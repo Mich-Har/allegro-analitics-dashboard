@@ -14,6 +14,21 @@ let searchDebounceTimer = null;
  * Inicjalizacja aplikacji
  */
 document.addEventListener('DOMContentLoaded', async () => {
+  // Sprawdz autoryzacje
+  if (!checkAuth()) {
+    renderLoginScreen();
+    attachLoginListeners();
+    return;
+  }
+
+  // Uzytkownik zalogowany - zaladuj dashboard
+  await initDashboard();
+});
+
+/**
+ * Inicjalizuje dashboard (po autoryzacji)
+ */
+async function initDashboard() {
   try {
     // Pokaz loading
     renderSkeletons();
@@ -40,7 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Blad inicjalizacji:', error);
     renderError('Nie udalo sie zaladowac danych. Sprawdz czy plik final_output_for_frontend.txt istnieje.');
   }
-});
+}
 
 /**
  * Podlacza event listeners
