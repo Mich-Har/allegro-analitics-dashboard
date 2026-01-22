@@ -9,6 +9,7 @@ let currentFilters = {};
 let expandedProducts = new Set();
 let currentSearchQuery = '';
 let searchDebounceTimer = null;
+let activeOnlyFilter = false;
 
 /**
  * Inicjalizacja aplikacji
@@ -138,6 +139,21 @@ function attachEventListeners() {
     }
   });
 
+  // Filtrowanie tylko aktywnych produktow
+  const activeOnlyCheckbox = document.getElementById('activeOnlyFilter');
+  if (activeOnlyCheckbox) {
+    activeOnlyCheckbox.addEventListener('change', (e) => {
+      activeOnlyFilter = e.target.checked;
+      renderProductsTable(
+        processedData.products,
+        currentSort.field,
+        currentSort.direction,
+        currentSearchQuery,
+        activeOnlyFilter
+      );
+    });
+  }
+
   // Zamykanie panelu bocznego
   document.addEventListener('click', (e) => {
     if (e.target.classList.contains('side-panel-overlay')) {
@@ -224,7 +240,8 @@ function handleSort(field) {
     processedData.products,
     currentSort.field,
     currentSort.direction,
-    currentSearchQuery
+    currentSearchQuery,
+    activeOnlyFilter
   );
 
   // Re-attach expand listeners
@@ -355,7 +372,8 @@ function handleSearch(query) {
     processedData.products,
     currentSort.field,
     currentSort.direction,
-    currentSearchQuery
+    currentSearchQuery,
+    activeOnlyFilter
   );
 }
 

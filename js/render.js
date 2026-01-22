@@ -189,17 +189,11 @@ function renderCharts(topProducts, markets) {
 /**
  * Renderuje tabele produktow
  */
-function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', searchQuery = '') {
+function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', searchQuery = '', activeOnly = false) {
   const container = document.getElementById('productsTable');
 
-  // Aktualizuj licznik produktow w naglowku
-  const tableTitle = document.querySelector('.table-title');
-  if (tableTitle) {
-    tableTitle.textContent = `📦 Produkty (${products.length})`;
-  }
-
   // Filtruj produkty po wyszukiwaniu
-  const filteredProducts = searchQuery
+  let filteredProducts = searchQuery
     ? products.filter(p => {
         const query = searchQuery.toLowerCase();
         const matchName = (p.product_name || '').toLowerCase().includes(query);
@@ -207,6 +201,20 @@ function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', se
         return matchName || matchSignature;
       })
     : products;
+
+  // Filtruj produkty tylko z aktywnymi aukcjami
+  if (activeOnly) {
+    filteredProducts = filteredProducts.filter(p => {
+      const uniqueAuctions = getUniqueAuctions(p);
+      return uniqueAuctions.some(a => a.status === 'ACTIVE');
+    });
+  }
+
+  // Aktualizuj licznik produktow w naglowku
+  const tableTitle = document.querySelector('.table-title');
+  if (tableTitle) {
+    tableTitle.textContent = `📦 Produkty (${filteredProducts.length})`;
+  }
 
   const sortedProducts = sortProducts(filteredProducts, sortField, sortDir);
 
@@ -243,24 +251,43 @@ function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', se
 }
 
 /**
+ * Pobiera unikalne aukcje z produktu (deduplikacja po ID)
+ * Aukcje sa duplikowane na roznych rynkach, wiec trzeba je zdeduplikowac
+ */
+function getUniqueAuctions(product) {
+  const auctions = product.aukcje_szczegolowo || {};
+  const auctionsMap = new Map();
+
+  // Iteruj przez wszystkie rynki i zbierz unikalne aukcje po ID
+  Object.values(auctions).forEach(marketAuctions => {
+    marketAuctions.forEach(auction => {
+      if (!auctionsMap.has(auction.id)) {
+        auctionsMap.set(auction.id, auction);
+      }
+    });
+  });
+
+  return Array.from(auctionsMap.values());
+}
+
+/**
  * Renderuje wiersz produktu
  */
 function renderProductRow(product, index, maxSales, maxViews) {
   const stock = product.podsumowanie_globalne?.stan_magazynowy_wspolny ?? '-';
   const stockClass = typeof stock === 'number' && stock < 10 ? 'text-danger' : '';
 
-  // Pobierz wszystkie aukcje ze wszystkich rynkow
-  const auctions = product.aukcje_szczegolowo || {};
-  const allAuctions = Object.values(auctions).flat();
-  const allActiveAuctions = allAuctions.filter(a => a.status === 'ACTIVE');
-  const allEndedAuctions = allAuctions.filter(a => a.status !== 'ACTIVE');
-  const activeAuctionsCount = allActiveAuctions.length;
-  const endedAuctionsCount = allEndedAuctions.length;
+  // Pobierz unikalne aukcje (zdeduplikowane po ID)
+  const uniqueAuctions = getUniqueAuctions(product);
+  const activeAuctions = uniqueAuctions.filter(a => a.status === 'ACTIVE');
+  const endedAuctions = uniqueAuctions.filter(a => a.status !== 'ACTIVE');
+  const activeAuctionsCount = activeAuctions.length;
+  const endedAuctionsCount = endedAuctions.length;
   const hasActiveAuctions = activeAuctionsCount > 0;
 
-  // Oblicz metryki tylko z aktywnych aukcji
-  const activeViews = allActiveAuctions.reduce((sum, a) => sum + (a.wyswietlen || 0), 0);
-  const activeSales = allActiveAuctions.reduce((sum, a) => sum + (a.sprzedanych || 0), 0);
+  // Oblicz metryki tylko z aktywnych aukcji (unikalne)
+  const activeViews = activeAuctions.reduce((sum, a) => sum + (a.wyswietlen || 0), 0);
+  const activeSales = activeAuctions.reduce((sum, a) => sum + (a.sprzedanych || 0), 0);
   const activeConversion = activeViews > 0 ? (activeSales / activeViews) * 100 : 0;
   const conversionStatus = getConversionStatus(activeConversion);
 
