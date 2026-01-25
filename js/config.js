@@ -77,6 +77,46 @@ const CONFIG = {
     '#ddd6fe',
   ],
 
+  // ============================================
+  // PROGI KLASYFIKACJI PRODUKTOW
+  // Edytuj wartosci ponizej aby dostosowac klasyfikacje
+  // ============================================
+
+  PRODUCT_STATUS: {
+    // Ile produktow pokazywac w kazdej karcie statusu
+    MAX_PRODUCTS_PER_CARD: 5,
+
+    // === SKALUJ ===
+    // Produkt do skalowania - doloz budzet, promuj, kopiuj oferte
+    // Warunki: WSZYSTKIE musza byc spelnione
+    SCALE: {
+      ZNV_MULTIPLIER: 1.3,        // ZNV >= avg_ZNV * 1.3 (wysoki zysk/wyswietlenie)
+      CONVERSION_MULTIPLIER: 1.0, // konwersja >= avg_konwersja (stabilna konwersja)
+      MIN_VIEWS: 150,             // wyswietlenia >= 150 (wiarygodnosc danych)
+      MIN_TRANSACTIONS: 5,        // transakcje >= 5 (wiarygodnosc danych)
+    },
+
+    // === OPTYMALIZUJ ===
+    // Produkt do optymalizacji - popraw cene, opis, zdjecia
+    // Warunki: WSZYSTKIE musza byc spelnione
+    OPTIMIZE: {
+      VIEWS_PERCENTILE: 70,       // wyswietlenia >= percentyl 70% (duzo ruchu)
+      VIEWS_FIXED: 300,           // lub wyswietlenia >= 300 (fallback)
+      ZNT_MULTIPLIER: 0.7,        // ZNT < avg_ZNT * 0.7 (niski zysk/transakcja)
+      CONVERSION_MULTIPLIER: 0.6, // konwersja >= avg_konwersja * 0.6 (nie dramatyczna)
+    },
+
+    // === WYGAS ===
+    // Produkt do wygaszenia - uwolnij uwage, budzet, miejsce
+    // Warunki: MINIMUM 2 z 3 musza byc spelnione
+    PHASE_OUT: {
+      ZNV_MULTIPLIER: 0.5,        // ZNV < avg_ZNV * 0.5 (niski zysk/wyswietlenie)
+      DRAINAGE_THRESHOLD: 0.25,   // drenaz >= 25% (wysoki drenaz prowizyjny)
+      MIN_VIEWS: 200,             // wyswietlenia >= 200 (wiarygodnosc danych)
+      MIN_CONDITIONS: 2,          // minimum 2 z 3 warunkow
+    },
+  },
+
   // Animacje
   ANIMATION: {
     DURATION_FAST: 150,
@@ -105,5 +145,9 @@ Object.freeze(CONFIG.CONVERSION_THRESHOLDS);
 Object.freeze(CONFIG.MARKETS);
 Object.freeze(CONFIG.MARKET_COLORS);
 Object.freeze(CONFIG.CHART_COLORS);
+Object.freeze(CONFIG.PRODUCT_STATUS);
+Object.freeze(CONFIG.PRODUCT_STATUS.SCALE);
+Object.freeze(CONFIG.PRODUCT_STATUS.OPTIMIZE);
+Object.freeze(CONFIG.PRODUCT_STATUS.PHASE_OUT);
 Object.freeze(CONFIG.ANIMATION);
 Object.freeze(CONFIG.DEFAULT_SORT);

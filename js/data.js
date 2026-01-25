@@ -10,6 +10,12 @@ let processedData = {
   markets: {},
   kpis: {},
   topProducts: [],
+  classifiedProducts: {
+    scale: [],
+    optimize: [],
+    phaseOut: [],
+    averages: {},
+  },
 };
 
 /**
@@ -76,7 +82,10 @@ function processData(data) {
   // Oblicz KPI
   const kpis = calculateKPIs(products, markets);
 
-  // Top produkty
+  // Klasyfikacja produktow (SKALUJ/OPTYMALIZUJ/WYGAS)
+  const classifiedProducts = classifyAllProducts(products);
+
+  // Top produkty (zachowane dla kompatybilnosci, ale nieuzywane)
   const topProducts = getTopProducts(products, CONFIG.TOP_PRODUCTS_COUNT);
 
   return {
@@ -84,6 +93,7 @@ function processData(data) {
     markets,
     kpis,
     topProducts,
+    classifiedProducts,
   };
 }
 
@@ -183,6 +193,17 @@ function calculateKPIs(products, markets) {
       })
     : products[0] || null;
 
+  // Globalny zysk/transakcja
+  const globalZNT = totalTransactions > 0 ? totalProfit / totalTransactions : 0;
+
+  // Globalny zysk/wyswietlenie
+   const globalZNV = totalViews > 0 ? totalProfit / totalViews : 0;
+
+
+  // Globalny drenaz prowizyjny
+  const totalCommissions = Math.abs(totalCommissionSuc) + Math.abs(totalCommissionFsf);
+  const globalDrainage = totalRevenue > 0 ? (totalCommissions / totalRevenue) * 100 : 0;
+
   return {
     totalSales,
     totalViews,
@@ -197,6 +218,9 @@ function calculateKPIs(products, markets) {
     totalProfit,
     totalTransactions,
     totalSoldQuantity30Days,
+    globalZNT,
+    globalZNV,
+    globalDrainage,
   };
 }
 
@@ -380,4 +404,221 @@ function formatNumber(num) {
  */
 function formatPercent(num, decimals = 2) {
   return num.toFixed(decimals) + '%';
+}
+
+// ============================================
+// KLASYFIKACJA PRODUKTOW (SKALUJ/OPTYMALIZUJ/WYGAS)
+// ============================================
+
+/**
+ * Oblicza srednie wartosci dla calego portfolio
+ * Potrzebne do klasyfikacji produktow
+ */
+function calculateAverages(products) {
+  let totalZNV = 0;
+  let totalZNT = 0;
+  let totalConversion = 0;
+  let countZNV = 0;
+  let countZNT = 0;
+  let countConversion = 0;
+  const allViews = [];
+
+  products.forEach(p => {
+    const views = p.podsumowanie_globalne?.suma_wyswietlen_total || 0;
+    const sales = p.podsumowanie_globalne?.suma_sprzedanych_total || 0;
+    const profit = p.summary_last_30_days?.total_profit || 0;
+    const transactions = p.summary_last_30_days?.transaction_count || 0;
+
+    // ZNV (zysk/wyswietlenia)
+    if (views > 0) {
+      totalZNV += profit / views;
+      countZNV++;
+      allViews.push(views);
+    }
+
+    // ZNT (zysk/transakcje)
+    if (transactions > 0) {
+      totalZNT += profit / transactions;
+      countZNT++;
+    }
+
+    // Konwersja
+    if (views > 0) {
+      totalConversion += (sales / views) * 100;
+      countConversion++;
+    }
+  });
+
+  // Oblicz percentyl wyswietlen
+  allViews.sort((a, b) => a - b);
+  const percentileIndex = Math.floor(allViews.length * (CONFIG.PRODUCT_STATUS.OPTIMIZE.VIEWS_PERCENTILE / 100));
+  const viewsPercentile = allViews[percentileIndex] || CONFIG.PRODUCT_STATUS.OPTIMIZE.VIEWS_FIXED;
+
+  return {
+    avgZNV: countZNV > 0 ? totalZNV / countZNV : 0,
+    avgZNT: countZNT > 0 ? totalZNT / countZNT : 0,
+    avgConversion: countConversion > 0 ? totalConversion / countConversion : 0,
+    viewsPercentile,
+  };
+}
+
+/**
+ * Oblicza drenaz prowizyjny produktu
+ * drenaz = |prowizja_SUC + prowizja_FSF| / przychod
+ */
+function calculateDrainage(product) {
+  const summary = product.summary_last_30_days;
+  if (!summary || !summary.total_revenue || summary.total_revenue === 0) {
+    return 0;
+  }
+
+  const totalCommission = Math.abs(summary.total_commission_suc || 0) + Math.abs(summary.total_commission_fsf || 0);
+  return totalCommission / summary.total_revenue;
+}
+
+/**
+ * Pobiera metryki produktu potrzebne do klasyfikacji
+ */
+function getProductMetrics(product) {
+  const views = product.podsumowanie_globalne?.suma_wyswietlen_total || 0;
+  const sales = product.podsumowanie_globalne?.suma_sprzedanych_total || 0;
+  const profit = product.summary_last_30_days?.total_profit || 0;
+  const transactions = product.summary_last_30_days?.transaction_count || 0;
+
+  return {
+    views,
+    sales,
+    profit,
+    transactions,
+    znv: views > 0 ? profit / views : 0,
+    znt: transactions > 0 ? profit / transactions : 0,
+    conversion: views > 0 ? (sales / views) * 100 : 0,
+    drainage: calculateDrainage(product),
+  };
+}
+
+/**
+ * Klasyfikuje produkt: SCALE | OPTIMIZE | PHASE_OUT | null
+ * Zwraca obiekt z statusem i powodem
+ */
+function classifyProduct(product, averages) {
+  const metrics = getProductMetrics(product);
+  const cfg = CONFIG.PRODUCT_STATUS;
+
+  // === SKALUJ ===
+  // Wszystkie warunki musza byc spelnione
+  const scaleConditions = {
+    highZNV: metrics.znv >= averages.avgZNV * cfg.SCALE.ZNV_MULTIPLIER,
+    stableConversion: metrics.conversion >= averages.avgConversion * cfg.SCALE.CONVERSION_MULTIPLIER,
+    minViews: metrics.views >= cfg.SCALE.MIN_VIEWS,
+    minTransactions: metrics.transactions >= cfg.SCALE.MIN_TRANSACTIONS,
+  };
+
+  if (scaleConditions.highZNV && scaleConditions.stableConversion &&
+      scaleConditions.minViews && scaleConditions.minTransactions) {
+    return {
+      status: 'SCALE',
+      metrics,
+      reason: 'Wysoki zysk/wyswietlenie i stabilna konwersja',
+    };
+  }
+
+  // === WYGAS ===
+  // Minimum 2 z 3 warunkow
+  const phaseOutConditions = {
+    lowZNV: metrics.znv < averages.avgZNV * cfg.PHASE_OUT.ZNV_MULTIPLIER,
+    highDrainage: metrics.drainage >= cfg.PHASE_OUT.DRAINAGE_THRESHOLD,
+    reliableData: metrics.views >= cfg.PHASE_OUT.MIN_VIEWS,
+  };
+
+  const phaseOutCount = Object.values(phaseOutConditions).filter(Boolean).length;
+  if (phaseOutCount >= cfg.PHASE_OUT.MIN_CONDITIONS) {
+    return {
+      status: 'PHASE_OUT',
+      metrics,
+      reason: 'Niski zysk lub wysoki drenaz prowizyjny',
+    };
+  }
+
+  // === OPTYMALIZUJ ===
+  // Wszystkie warunki musza byc spelnione
+  const optimizeConditions = {
+    highViews: metrics.views >= averages.viewsPercentile || metrics.views >= cfg.OPTIMIZE.VIEWS_FIXED,
+    lowZNT: metrics.znt < averages.avgZNT * cfg.OPTIMIZE.ZNT_MULTIPLIER,
+    notBadConversion: metrics.conversion >= averages.avgConversion * cfg.OPTIMIZE.CONVERSION_MULTIPLIER,
+  };
+
+  if (optimizeConditions.highViews && optimizeConditions.lowZNT && optimizeConditions.notBadConversion) {
+    return {
+      status: 'OPTIMIZE',
+      metrics,
+      reason: 'Duzo ruchu, ale niski zysk na transakcji',
+    };
+  }
+
+  // Brak klasyfikacji
+  return null;
+}
+
+/**
+ * Klasyfikuje wszystkie produkty i zwraca pogrupowane listy
+ */
+function classifyAllProducts(products) {
+  const averages = calculateAverages(products);
+
+  const classified = {
+    scale: [],      // Do skalowania
+    optimize: [],   // Do optymalizacji
+    phaseOut: [],   // Do wygaszenia
+    averages,       // Srednie dla referencji
+  };
+
+  products.forEach(product => {
+    const classification = classifyProduct(product, averages);
+    if (classification) {
+      product._classification = classification;
+
+      switch (classification.status) {
+        case 'SCALE':
+          classified.scale.push(product);
+          break;
+        case 'OPTIMIZE':
+          classified.optimize.push(product);
+          break;
+        case 'PHASE_OUT':
+          classified.phaseOut.push(product);
+          break;
+      }
+    }
+  });
+
+  // Sortuj listy - najwazniejsze produkty na gorze
+  // SCALE: po ZNV malejaco (najlepszy zysk/wyswietlenie)
+  classified.scale.sort((a, b) => {
+    const znvA = a._classification?.metrics?.znv || 0;
+    const znvB = b._classification?.metrics?.znv || 0;
+    return znvB - znvA;
+  });
+
+  // OPTIMIZE: po wyswietleniach malejaco (najwiekszy potencjal)
+  classified.optimize.sort((a, b) => {
+    const viewsA = a._classification?.metrics?.views || 0;
+    const viewsB = b._classification?.metrics?.views || 0;
+    return viewsB - viewsA;
+  });
+
+  // PHASE_OUT: po drenazu malejaco (najgorsze najpierw)
+  classified.phaseOut.sort((a, b) => {
+    const drainA = a._classification?.metrics?.drainage || 0;
+    const drainB = b._classification?.metrics?.drainage || 0;
+    return drainB - drainA;
+  });
+
+  // Ogranicz do max produktow per karta
+  const maxPerCard = CONFIG.PRODUCT_STATUS.MAX_PRODUCTS_PER_CARD;
+  classified.scale = classified.scale.slice(0, maxPerCard);
+  classified.optimize = classified.optimize.slice(0, maxPerCard);
+  classified.phaseOut = classified.phaseOut.slice(0, maxPerCard);
+
+  return classified;
 }

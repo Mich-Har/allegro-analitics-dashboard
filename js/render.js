@@ -8,7 +8,7 @@
  */
 function renderDashboard(data) {
   renderHeader();
-  renderTopProducts(data.topProducts);
+  renderProductStatusCards(data.classifiedProducts);
   renderGlobalSummary(data.kpis);
   renderProductsTable(data.products);
 }
@@ -47,13 +47,14 @@ function renderHeader() {
 }
 
 /**
- * Renderuje globalne podsumowanie (jeden blok)
+ * Renderuje globalne podsumowanie (dwa wiersze)
  */
 function renderGlobalSummary(kpis) {
   const container = document.getElementById('globalSummary');
 
   const profitClass = kpis.totalProfit > 0 ? 'profit' : 'loss';
   const profitColor = kpis.totalProfit > 0 ? 'var(--success)' : 'var(--danger)';
+  const drainageColor = kpis.globalDrainage > 25 ? 'var(--danger)' : kpis.globalDrainage > 15 ? 'var(--warning)' : 'var(--text-primary)';
 
   container.innerHTML = `
     <div class="global-summary-card animate-fadeIn">
@@ -61,7 +62,9 @@ function renderGlobalSummary(kpis) {
         <h2 class="global-summary-title">📊 Podsumowanie globalne</h2>
         <span class="global-summary-period">Ostatnie 30 dni</span>
       </div>
-      <div class="global-summary-grid">
+
+      <!-- Wiersz 1: Metryki wydajnosci -->
+      <div class="global-summary-row">
         <div class="global-summary-section">
           <div class="global-summary-label">Transakcje/Sprzedaz(szt.)</div>
           <div class="global-summary-value">${kpis.totalTransactions} / ${kpis.totalSoldQuantity30Days}</div>
@@ -74,6 +77,22 @@ function renderGlobalSummary(kpis) {
           <div class="global-summary-label">Konwersja</div>
           <div class="global-summary-value">${formatPercent(kpis.avgConversion)}</div>
         </div>
+        <div class="global-summary-section">
+          <div class="global-summary-label">Drenaz</div>
+          <div class="global-summary-value" style="color: ${drainageColor};">${kpis.globalDrainage.toFixed(1)}%</div>
+        </div>
+        <div class="global-summary-section">
+          <div class="global-summary-label">Zysk/Transakcja</div>
+          <div class="global-summary-value">${formatCurrency(kpis.globalZNT)}</div>
+        </div>
+        <div class="global-summary-section">
+          <div class="global-summary-label">Zysk/Wyswietlenie</div>
+          <div class="global-summary-value">${kpis.globalZNV.toFixed(2)} PLN</div>
+        </div>
+      </div>
+
+      <!-- Wiersz 2: Finanse -->
+      <div class="global-summary-row">
         <div class="global-summary-section">
           <div class="global-summary-label">Przychod</div>
           <div class="global-summary-value">${formatCurrency(kpis.totalRevenue)}</div>
@@ -96,48 +115,104 @@ function renderGlobalSummary(kpis) {
 }
 
 /**
- * Renderuje sekcje Top Produkty
+ * Renderuje karty statusow produktow (SKALUJ/OPTYMALIZUJ/WYGAS)
  */
-function renderTopProducts(topProducts) {
+function renderProductStatusCards(classifiedProducts) {
   const container = document.getElementById('topProductsSection');
 
-  if (!topProducts || topProducts.length === 0) {
+  if (!classifiedProducts) {
     container.innerHTML = '';
     return;
   }
 
-  const maxValue = Math.max(...topProducts.map(p => p.podsumowanie_globalne?.suma_sprzedanych_total || 0), 1);
+  const { scale, optimize, phaseOut } = classifiedProducts;
 
-  let productsHtml = topProducts.map((product, index) => {
-    const sales = product.podsumowanie_globalne?.suma_sprzedanych_total || 0;
-    const percentage = (sales / maxValue) * 100;
-    const transactions = product.summary_last_30_days?.transaction_count || 0;
+  // Helper do renderowania listy produktow w karcie
+  const renderProductList = (products, type) => {
+    if (!products || products.length === 0) {
+      return '<div class="status-empty">Brak produktow w tej kategorii</div>';
+    }
 
-    return `
-      <div class="top-item ${index === 0 ? 'top-item-first' : ''}">
-        <div class="top-item-rank">${index + 1}</div>
-        <div class="top-item-content">
-          <div class="top-item-name">${truncateText(product.product_name || product.sygnatura, 70)}</div>
-          <div class="top-item-bar">
-            <div class="top-item-bar-fill" style="width: ${percentage}%;"></div>
-          </div>
+    return products.map((product, index) => {
+      const metrics = product._classification?.metrics || {};
+      const name = truncateText(product.product_name || product.sygnatura, 40);
+
+      let metricHtml = '';
+      switch (type) {
+        case 'scale':
+          metricHtml = `
+            <span class="status-metric">ZNV: ${metrics.znv.toFixed(2)}</span>
+            <span class="status-metric">${metrics.transactions} trans.</span>
+          `;
+          break;
+        case 'optimize':
+          metricHtml = `
+            <span class="status-metric">ZNT: ${formatCurrency(metrics.znt)}</span>
+            <span class="status-metric">${formatNumber(metrics.views)} wys.</span>
+          `;
+          break;
+        case 'phaseOut':
+          metricHtml = `
+            <span class="status-metric">Drenaz: ${(metrics.drainage * 100).toFixed(1)}%</span>
+            <span class="status-metric">ZNV: ${metrics.znv.toFixed(3)}</span>
+          `;
+          break;
+      }
+
+      return `
+        <div class="status-item" style="animation-delay: ${index * 50}ms">
+          <div class="status-item-name">${name}</div>
+          <div class="status-item-metrics">${metricHtml}</div>
         </div>
-        <div class="top-item-stats">
-          <span class="top-item-sales">${sales} szt.</span>
-          <span class="top-item-transactions">${transactions} trans.</span>
-        </div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  };
 
   container.innerHTML = `
-    <div class="top-products-card">
-      <div class="top-products-header">
-        <span class="top-products-title">🏆 Top Produkty</span>
-        <span class="top-products-badge">Sprzedaz</span>
+    <div class="status-cards-container animate-fadeIn">
+      <!-- SKALUJ -->
+      <div class="status-card status-card-scale">
+        <div class="status-card-header">
+          <span class="status-card-icon">🚀</span>
+          <span class="status-card-title">Do skalowania</span>
+          <span class="status-card-count">${scale.length}</span>
+        </div>
+        <div class="status-card-description">
+          Wysoki zysk/wyswietlenie i stabilna konwersja. Doloz budzet i promuj.
+        </div>
+        <div class="status-card-list">
+          ${renderProductList(scale, 'scale')}
+        </div>
       </div>
-      <div class="top-products-content">
-        ${productsHtml}
+
+      <!-- OPTYMALIZUJ -->
+      <div class="status-card status-card-optimize">
+        <div class="status-card-header">
+          <span class="status-card-icon">⚙️</span>
+          <span class="status-card-title">Do optymalizacji</span>
+          <span class="status-card-count">${optimize.length}</span>
+        </div>
+        <div class="status-card-description">
+          Duzo ruchu, ale niski zysk/transakcja. Popraw cene, opis lub zdjecia.
+        </div>
+        <div class="status-card-list">
+          ${renderProductList(optimize, 'optimize')}
+        </div>
+      </div>
+
+      <!-- WYGAS -->
+      <div class="status-card status-card-phaseout">
+        <div class="status-card-header">
+          <span class="status-card-icon">⏸️</span>
+          <span class="status-card-title">Do wygaszenia</span>
+          <span class="status-card-count">${phaseOut.length}</span>
+        </div>
+        <div class="status-card-description">
+          Niski zysk lub wysoki drenaz prowizyjny. Uwolnij budzet i uwage.
+        </div>
+        <div class="status-card-list">
+          ${renderProductList(phaseOut, 'phaseOut')}
+        </div>
       </div>
     </div>
   `;
@@ -338,7 +413,7 @@ function renderProductRow(product, index, maxSales, maxViews) {
       <td>
         <div class="product-cell">
           <span class="product-name tooltip" data-tooltip="${product.product_name || ''}">
-            ${truncateText(product.product_name || '-', 40)}
+            ${truncateText(product.product_name || '-', 60)}
           </span>
           <span class="product-signature">${product.sygnatura}</span>
         </div>
