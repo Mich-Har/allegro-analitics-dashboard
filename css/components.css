@@ -200,20 +200,28 @@
 .product-cell {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  overflow: hidden;
 }
 
 .product-cell .product-name {
   font-weight: var(--font-weight-medium);
   color: var(--text-primary);
-  line-height: 1.3;
+  line-height: 1.2;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .product-cell .product-signature {
   font-family: var(--font-mono);
-  font-size: var(--font-size-tiny);
+  font-size: 9px;
   color: var(--text-muted);
-  opacity: 0.5;
+  opacity: 0.6;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ===== MARKETS GRID (zwijane rynki) ===== */
@@ -774,14 +782,26 @@
 
 .summary-30-days-metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: var(--space-m);
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-s);
   margin-bottom: var(--space-m);
+}
+
+@media (max-width: 1199px) {
+  .summary-30-days-metrics {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .summary-30-days-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .metric-card {
   background: var(--bg-card);
-  padding: var(--space-s) var(--space-m);
+  padding: 6px 10px;
   border-radius: var(--radius-s);
   border-left: 3px solid var(--primary);
 }
@@ -803,22 +823,24 @@
 }
 
 .metric-label {
-  font-size: 11px;
+  font-size: 9px;
   color: var(--text-muted);
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .metric-value {
-  font-size: 16px;
+  font-size: 13px;
   font-weight: 600;
   font-family: var(--font-mono);
+  white-space: nowrap;
 }
 
 /* Per offer section */
 .offer-section {
   background: var(--bg-card);
   border-radius: var(--radius-s);
-  margin-bottom: var(--space-s);
+  margin-bottom: 4px;
   border: 1px solid var(--border-color);
 }
 
@@ -826,19 +848,85 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-s) var(--space-m);
+  padding: 6px 10px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 11px;
+  gap: 12px;
 }
 
 .offer-header:hover {
   background: rgba(99, 102, 241, 0.05);
 }
 
+.offer-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.offer-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.offer-expand-icon {
+  font-size: 9px;
+  color: var(--text-muted);
+}
+
+.offer-id {
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.offer-name {
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.offer-revenue {
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  min-width: 80px;
+  text-align: right;
+}
+
+.offer-trans {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.offer-suc,
+.offer-fsf {
+  font-family: var(--font-mono);
+  min-width: 70px;
+  text-align: right;
+}
+
+.offer-profit {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  min-width: 80px;
+  text-align: right;
+}
+
 .offer-content {
   border-top: 1px solid var(--border-color);
-  padding: var(--space-m);
+  padding: 8px;
   background: var(--bg-dark);
+}
+
+.offer-transactions {
+  background: var(--bg-card);
+  border-radius: var(--radius-s);
 }
 
 /* Transactions */
@@ -856,19 +944,74 @@
   background: var(--bg-card);
   border-radius: var(--radius-s);
   margin-top: var(--space-s);
+  overflow-x: auto;
 }
 
-.transaction-item {
+.transaction-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--space-xs) var(--space-s);
-  border-bottom: 1px solid var(--border-color);
+  padding: 6px 12px;
   font-size: 12px;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.transaction-item:last-child {
+.transaction-row:last-child {
   border-bottom: none;
+}
+
+.transaction-row-header {
+  background: var(--bg-dark);
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.transaction-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.transaction-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.transaction-cell {
+  white-space: nowrap;
+}
+
+.transaction-date {
+  color: var(--text-muted);
+  min-width: 120px;
+}
+
+.transaction-qty {
+  min-width: 50px;
+  text-align: center;
+}
+
+.transaction-price {
+  font-family: var(--font-mono);
+  min-width: 85px;
+  text-align: right;
+}
+
+.transaction-suc,
+.transaction-fsf {
+  font-family: var(--font-mono);
+  min-width: 75px;
+  text-align: right;
+}
+
+.transaction-profit {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  min-width: 85px;
+  text-align: right;
 }
 
 /* Empty state for 30 days */

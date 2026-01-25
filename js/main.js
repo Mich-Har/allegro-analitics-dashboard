@@ -61,10 +61,6 @@ async function initDashboard() {
     // Wyrenderuj dashboard
     renderDashboard(data);
 
-    // Dodaj animacje liczb
-    document.body.classList.add('animate-numbers');
-    animateKPINumbers();
-
     // Podepnij eventy
     attachEventListeners();
 
@@ -195,7 +191,7 @@ async function handleRefresh() {
     document.body.classList.add('refreshing');
 
     // Fade out content
-    document.querySelectorAll('.kpi-card, .chart-container, .table-section').forEach(el => {
+    document.querySelectorAll('.global-summary-card, .chart-container, .table-section').forEach(el => {
       el.style.opacity = '0.5';
     });
 
@@ -205,11 +201,8 @@ async function handleRefresh() {
     // Re-renderuj
     renderDashboard(data);
 
-    // Animacje liczb
-    animateKPINumbers();
-
     // Fade in content
-    document.querySelectorAll('.kpi-card, .chart-container, .table-section').forEach(el => {
+    document.querySelectorAll('.global-summary-card, .chart-container, .table-section').forEach(el => {
       el.style.opacity = '1';
     });
 

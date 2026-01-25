@@ -4,7 +4,7 @@
    =========================================== */
 
 /**
- * Renderuje horizontal bar chart (top 5 produktow) - wersja z pelna nazwa
+ * Renderuje horizontal bar chart (top produktow) - minimalistyczna wersja
  */
 function renderBarChart(container, data, options = {}) {
   const {
@@ -13,22 +13,22 @@ function renderBarChart(container, data, options = {}) {
 
   const maxValue = Math.max(...data.map(d => d.value), 1);
 
-  let html = '<div class="bar-chart-vertical">';
+  let html = '<div class="top-products-list">';
 
   data.forEach((item, index) => {
     const percentage = (item.value / maxValue) * 100;
-    const color = CONFIG.CHART_COLORS[index] || CONFIG.CHART_COLORS[0];
     const animationClass = animated ? `bar-animated stagger-${index + 1}` : '';
 
     html += `
-      <div class="bar-item" data-index="${index}">
-        <div class="bar-label-full">${item.label}</div>
-        <div class="bar-row">
-          <div class="bar-track">
-            <div class="bar-fill ${animationClass}" style="width: ${percentage}%; background: linear-gradient(90deg, ${color}, ${adjustColor(color, 40)});"></div>
+      <div class="top-product-item" data-index="${index}">
+        <div class="top-product-rank">${index + 1}</div>
+        <div class="top-product-info">
+          <div class="top-product-name">${truncateText(item.label, 60)}</div>
+          <div class="top-product-bar">
+            <div class="top-product-bar-fill ${animationClass}" style="width: ${percentage}%;"></div>
           </div>
-          <div class="bar-value">${formatNumber(item.value)}</div>
         </div>
+        <div class="top-product-value">${formatNumber(item.value)} szt.</div>
       </div>
     `;
   });
@@ -40,55 +40,86 @@ function renderBarChart(container, data, options = {}) {
     const style = document.createElement('style');
     style.id = 'bar-chart-styles';
     style.textContent = `
-      .bar-chart-vertical {
+      .top-products-list {
         display: flex;
         flex-direction: column;
-        gap: 16px;
+        gap: 8px;
       }
 
-      .bar-item {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-      }
-
-      .bar-label-full {
-        font-size: 13px;
-        color: var(--text-primary);
-        line-height: 1.3;
-      }
-
-      .bar-row {
+      .top-product-item {
         display: flex;
         align-items: center;
         gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border-color);
       }
 
-      .bar-track {
-        flex: 1;
+      .top-product-item:last-child {
+        border-bottom: none;
+      }
+
+      .top-product-rank {
+        width: 24px;
         height: 24px;
         background: var(--bg-dark);
-        border-radius: 6px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text-muted);
+        flex-shrink: 0;
+      }
+
+      .top-product-item[data-index="0"] .top-product-rank {
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+      }
+
+      .top-product-info {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .top-product-name {
+        font-size: 13px;
+        color: var(--text-primary);
+        line-height: 1.3;
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .top-product-bar {
+        height: 3px;
+        background: var(--bg-dark);
+        border-radius: 2px;
         overflow: hidden;
       }
 
-      .bar-fill {
+      .top-product-bar-fill {
         height: 100%;
-        border-radius: 6px;
-        transition: width 0.8s ease-out;
+        background: var(--primary);
+        border-radius: 2px;
+        transition: width 0.6s ease-out;
       }
 
-      .bar-value {
+      .top-product-item[data-index="0"] .top-product-bar-fill {
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+      }
+
+      .top-product-value {
         font-family: var(--font-mono);
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 600;
         color: var(--text-primary);
-        min-width: 40px;
-        text-align: right;
+        white-space: nowrap;
       }
 
-      .bar-fill.bar-animated {
-        animation: barGrowWidth 0.8s ease-out forwards;
+      .top-product-bar-fill.bar-animated {
+        animation: barGrowWidth 0.6s ease-out forwards;
       }
 
       @keyframes barGrowWidth {

@@ -135,11 +135,30 @@ function calculateKPIs(products, markets) {
   let totalSales = 0;
   let totalViews = 0;
 
+  // Nowe KPI z summary_last_30_days
+  let totalRevenue = 0;
+  let totalCommissionSuc = 0;
+  let totalCommissionFsf = 0;
+  let totalProfit = 0;
+  let totalTransactions = 0;
+  let totalSoldQuantity30Days = 0;
+
   products.forEach(p => {
     const sales = p.podsumowanie_globalne?.suma_sprzedanych_total || 0;
     const views = p.podsumowanie_globalne?.suma_wyswietlen_total || 0;
     totalSales += sales;
     totalViews += views;
+
+    // Agreguj dane z ostatnich 30 dni
+    const summary30 = p.summary_last_30_days;
+    if (summary30) {
+      totalRevenue += summary30.total_revenue || 0;
+      totalCommissionSuc += summary30.total_commission_suc || 0;
+      totalCommissionFsf += summary30.total_commission_fsf || 0;
+      totalProfit += summary30.total_profit || 0;
+      totalTransactions += summary30.transaction_count || 0;
+      totalSoldQuantity30Days += summary30.total_sold_quantity || 0;
+    }
   });
 
   // Debug log
@@ -171,6 +190,13 @@ function calculateKPIs(products, markets) {
     topProduct,
     productCount: products.length,
     marketCount: Object.keys(markets).length,
+    // Nowe KPI z ostatnich 30 dni
+    totalRevenue,
+    totalCommissionSuc,
+    totalCommissionFsf,
+    totalProfit,
+    totalTransactions,
+    totalSoldQuantity30Days,
   };
 }
 
@@ -223,6 +249,28 @@ function sortProducts(products, field, direction = 'desc') {
         valueB = b.podsumowanie_globalne?.suma_wyswietlen_total > 0
           ? b.podsumowanie_globalne.suma_sprzedanych_total / b.podsumowanie_globalne.suma_wyswietlen_total
           : 0;
+        break;
+      case 'znv':
+        // Zysk netto / wyswietlenia
+        const viewsA_znv = a.podsumowanie_globalne?.suma_wyswietlen_total || 0;
+        const viewsB_znv = b.podsumowanie_globalne?.suma_wyswietlen_total || 0;
+        const profitA_znv = a.summary_last_30_days?.total_profit || 0;
+        const profitB_znv = b.summary_last_30_days?.total_profit || 0;
+        valueA = viewsA_znv > 0 ? profitA_znv / viewsA_znv : 0;
+        valueB = viewsB_znv > 0 ? profitB_znv / viewsB_znv : 0;
+        break;
+      case 'znt':
+        // Zysk netto / transakcje
+        const transA = a.summary_last_30_days?.transaction_count || 0;
+        const transB = b.summary_last_30_days?.transaction_count || 0;
+        const profitA_znt = a.summary_last_30_days?.total_profit || 0;
+        const profitB_znt = b.summary_last_30_days?.total_profit || 0;
+        valueA = transA > 0 ? profitA_znt / transA : 0;
+        valueB = transB > 0 ? profitB_znt / transB : 0;
+        break;
+      case 'stock':
+        valueA = a.podsumowanie_globalne?.stan_magazynowy_wspolny ?? 0;
+        valueB = b.podsumowanie_globalne?.stan_magazynowy_wspolny ?? 0;
         break;
       case 'name':
         valueA = a.sygnatura || '';

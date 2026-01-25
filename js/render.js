@@ -8,8 +8,8 @@
  */
 function renderDashboard(data) {
   renderHeader();
-  renderKPICards(data.kpis);
-  renderCharts(data.topProducts, data.markets);
+  renderTopProducts(data.topProducts);
+  renderGlobalSummary(data.kpis);
   renderProductsTable(data.products);
 }
 
@@ -47,62 +47,100 @@ function renderHeader() {
 }
 
 /**
- * Renderuje karty KPI
+ * Renderuje globalne podsumowanie (jeden blok)
  */
-function renderKPICards(kpis) {
-  const container = document.getElementById('kpiGrid');
+function renderGlobalSummary(kpis) {
+  const container = document.getElementById('globalSummary');
 
-  const cards = [
-    {
-      icon: '📊',
-      value: kpis.totalSales,
-      label: 'Calkowita Sprzedaz',
-      accent: 'success',
-      format: 'number',
-    },
-    {
-      icon: '👁️',
-      value: kpis.totalViews,
-      label: 'Calkowite Wyswietlenia',
-      accent: 'info',
-      format: 'number',
-    },
-    {
-      icon: '🎯',
-      value: kpis.avgConversion,
-      label: 'Srednia Konwersja',
-      accent: 'warning',
-      format: 'percent',
-    },
-    {
-      icon: '🏆',
-      value: kpis.topProduct?.product_name || 'Brak danych',
-      label: 'Top Produkt',
-      subtext: kpis.topProduct
-        ? `${kpis.topProduct.podsumowanie_globalne?.suma_sprzedanych_total || 0} szt.`
-        : '',
-      signature: kpis.topProduct?.sygnatura || '',
-      accent: 'secondary',
-      format: 'text',
-    },
-  ];
+  const profitClass = kpis.totalProfit > 0 ? 'profit' : 'loss';
+  const profitColor = kpis.totalProfit > 0 ? 'var(--success)' : 'var(--danger)';
 
-  container.innerHTML = cards.map((card, index) => `
-    <div class="kpi-card animate-fadeIn stagger-${index + 1}" data-accent="${card.accent}">
-      <div class="kpi-icon">${card.icon}</div>
-      <div class="kpi-value" data-value="${card.format === 'number' || card.format === 'percent' ? card.value : ''}" data-format="${card.format}">
-        ${formatKPIValue(card.value, card.format)}
+  container.innerHTML = `
+    <div class="global-summary-card animate-fadeIn">
+      <div class="global-summary-header">
+        <h2 class="global-summary-title">📊 Podsumowanie globalne</h2>
+        <span class="global-summary-period">Ostatnie 30 dni</span>
       </div>
-      ${card.signature ? `<div class="kpi-signature">${card.signature}</div>` : ''}
-      <div class="kpi-label">${card.label}</div>
-      ${card.subtext ? `<div class="kpi-trend">${card.subtext}</div>` : ''}
+      <div class="global-summary-grid">
+        <div class="global-summary-section">
+          <div class="global-summary-label">Transakcje/Sprzedaz(szt.)</div>
+          <div class="global-summary-value">${kpis.totalTransactions} / ${kpis.totalSoldQuantity30Days}</div>
+        </div>
+        <div class="global-summary-section">
+          <div class="global-summary-label">Wyswietlenia</div>
+          <div class="global-summary-value">${formatNumber(kpis.totalViews)}</div>
+        </div>
+        <div class="global-summary-section">
+          <div class="global-summary-label">Konwersja</div>
+          <div class="global-summary-value">${formatPercent(kpis.avgConversion)}</div>
+        </div>
+        <div class="global-summary-section">
+          <div class="global-summary-label">Przychod</div>
+          <div class="global-summary-value">${formatCurrency(kpis.totalRevenue)}</div>
+        </div>
+        <div class="global-summary-section">
+          <div class="global-summary-label">Prowizja SUC</div>
+          <div class="global-summary-value" style="color: var(--warning);">${formatCurrency(kpis.totalCommissionSuc)}</div>
+        </div>
+        <div class="global-summary-section">
+          <div class="global-summary-label">Prowizja FSF</div>
+          <div class="global-summary-value" style="color: var(--info);">${formatCurrency(kpis.totalCommissionFsf)}</div>
+        </div>
+        <div class="global-summary-section global-summary-profit ${profitClass}">
+          <div class="global-summary-label">Zysk netto</div>
+          <div class="global-summary-value" style="color: ${profitColor};">${formatCurrency(kpis.totalProfit)}</div>
+        </div>
+      </div>
     </div>
-  `).join('');
+  `;
+}
 
-  // Animacja liczenia
-  if (document.body.classList.contains('animate-numbers')) {
-    animateKPINumbers();
+/**
+ * Renderuje sekcje Top Produkty
+ */
+function renderTopProducts(topProducts) {
+  const container = document.getElementById('topProductsSection');
+
+  if (!topProducts || topProducts.length === 0) {
+    container.innerHTML = '';
+    return;
   }
+
+  const maxValue = Math.max(...topProducts.map(p => p.podsumowanie_globalne?.suma_sprzedanych_total || 0), 1);
+
+  let productsHtml = topProducts.map((product, index) => {
+    const sales = product.podsumowanie_globalne?.suma_sprzedanych_total || 0;
+    const percentage = (sales / maxValue) * 100;
+    const transactions = product.summary_last_30_days?.transaction_count || 0;
+
+    return `
+      <div class="top-item ${index === 0 ? 'top-item-first' : ''}">
+        <div class="top-item-rank">${index + 1}</div>
+        <div class="top-item-content">
+          <div class="top-item-name">${truncateText(product.product_name || product.sygnatura, 70)}</div>
+          <div class="top-item-bar">
+            <div class="top-item-bar-fill" style="width: ${percentage}%;"></div>
+          </div>
+        </div>
+        <div class="top-item-stats">
+          <span class="top-item-sales">${sales} szt.</span>
+          <span class="top-item-transactions">${transactions} trans.</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="top-products-card">
+      <div class="top-products-header">
+        <span class="top-products-title">🏆 Top Produkty</span>
+        <span class="top-products-badge">Sprzedaz</span>
+      </div>
+      <div class="top-products-content">
+        ${productsHtml}
+      </div>
+    </div>
+  `;
 }
 
 /**
@@ -165,23 +203,15 @@ function animateValue(element, start, end, duration, isPercent = false) {
  * Renderuje sekcje wykresow
  */
 function renderCharts(topProducts, markets) {
-  // Bar chart - top produkty
+  // Bar chart - top produkty (minimalistyczny styl)
   const barContainer = document.getElementById('barChart');
   const barChartData = prepareBarChartData(topProducts);
   renderBarChart(barContainer, barChartData, {
-    width: 520,
-    height: Math.max(200, topProducts.length * 44 + 30),
-    labelWidth: 180,
-    barHeight: 28,
-    fontSize: 11,
-    animated: true,
-  });
-
-  // Donut chart - rynki
-  const donutContainer = document.getElementById('donutChart');
-  const donutChartData = prepareDonutChartData(markets);
-  renderDonutChart(donutContainer, donutChartData, {
-    size: 250,
+    width: 700,
+    height: Math.max(150, topProducts.length * 32 + 20),
+    labelWidth: 220,
+    barHeight: 18,
+    fontSize: 12,
     animated: true,
   });
 }
@@ -221,13 +251,19 @@ function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', se
             Produkt <span class="sort-icon">${getSortIcon('name', sortField, sortDir)}</span>
           </th>
           <th data-sort="views" class="${sortField === 'views' ? 'sorted' : ''}">
-            Wyswietlenia <span class="sort-icon">${getSortIcon('views', sortField, sortDir)}</span>
+            Wyświetlenia <span class="sort-icon">${getSortIcon('views', sortField, sortDir)}</span>
           </th>
           <th data-sort="sales" class="${sortField === 'sales' ? 'sorted' : ''}">
             Sprzedaz <span class="sort-icon">${getSortIcon('sales', sortField, sortDir)}</span>
           </th>
           <th data-sort="conversion" class="${sortField === 'conversion' ? 'sorted' : ''}">
             Konwersja <span class="sort-icon">${getSortIcon('conversion', sortField, sortDir)}</span>
+          </th>
+          <th data-sort="znv" class="${sortField === 'znv' ? 'sorted' : ''}">
+            Zysk/Wyświetlenia <span class="sort-icon">${getSortIcon('znv', sortField, sortDir)}</span>
+          </th>
+          <th data-sort="znt" class="${sortField === 'znt' ? 'sorted' : ''}">
+            Zysk/Transakcja <span class="sort-icon">${getSortIcon('znt', sortField, sortDir)}</span>
           </th>
           <th data-sort="stock" class="${sortField === 'stock' ? 'sorted' : ''}">
             Magazyn <span class="sort-icon">${getSortIcon('stock', sortField, sortDir)}</span>
@@ -283,6 +319,16 @@ function renderProductRow(product, index, maxSales, maxViews) {
   const activeConversion = activeViews > 0 ? (activeSales / activeViews) * 100 : 0;
   const conversionStatus = getConversionStatus(activeConversion);
 
+  // Oblicz ZNV i ZNT z danych 30-dniowych
+  const summary30 = product.summary_last_30_days;
+  const profit30 = summary30?.total_profit || 0;
+  const views30 = product.podsumowanie_globalne?.suma_wyswietlen_total || 0;
+  const transactions30 = summary30?.transaction_count || 0;
+
+  const znv = views30 > 0 ? profit30 / views30 : 0;
+  const znt = transactions30 > 0 ? profit30 / transactions30 : 0;
+  const profitColor = profit30 >= 0 ? 'var(--success)' : 'var(--danger)';
+
   const inactiveClass = !hasActiveAuctions ? 'product-inactive' : '';
   const conversionBadgeClass = !hasActiveAuctions ? 'badge-neutral' :
     (conversionStatus.class === 'high' ? 'badge-success' : conversionStatus.class === 'medium' ? 'badge-warning' : 'badge-danger');
@@ -301,7 +347,7 @@ function renderProductRow(product, index, maxSales, maxViews) {
         <span class="text-mono">${formatNumber(activeViews)}</span>
       </td>
       <td style="text-align: right;">
-        <strong class="text-mono">${activeSales} szt.</strong>
+        <strong class="text-mono">${activeSales}</strong>
       </td>
       <td style="text-align: right;">
         <span class="badge ${conversionBadgeClass}">
@@ -309,7 +355,13 @@ function renderProductRow(product, index, maxSales, maxViews) {
         </span>
       </td>
       <td style="text-align: right;">
-        <span class="text-mono ${stockClass}">${typeof stock === 'number' ? stock + ' szt.' : stock}</span>
+        <span class="text-mono" style="color: ${profitColor};">${znv.toFixed(2)}</span>
+      </td>
+      <td style="text-align: right;">
+        <span class="text-mono" style="color: ${profitColor};">${znt.toFixed(2)}</span>
+      </td>
+      <td style="text-align: right;">
+        <span class="text-mono ${stockClass}">${typeof stock === 'number' ? stock : stock}</span>
       </td>
       <td style="text-align: center;">
         <span class="text-mono">
@@ -318,7 +370,7 @@ function renderProductRow(product, index, maxSales, maxViews) {
       </td>
     </tr>
     <tr class="expanded-content" id="expanded-${product.sygnatura}" style="display: none;">
-      <td colspan="6">
+      <td colspan="8">
         <div class="expanded-inner">
           ${renderProductDetails(product)}
         </div>
@@ -528,7 +580,7 @@ function renderSummary30Days(product) {
         </div>
       </div>
       <div class="summary-30-days-content" style="display: none;">
-        ${renderSummaryMetrics(summary)}
+        ${renderSummaryMetrics(summary, product)}
         ${renderOffersSection(summary.by_offer, product.sygnatura)}
       </div>
     </div>
@@ -538,40 +590,47 @@ function renderSummary30Days(product) {
 /**
  * Renderuje metryki podsumowania 30 dni
  */
-function renderSummaryMetrics(summary) {
+function renderSummaryMetrics(summary, product) {
+  const views = product.podsumowanie_globalne?.suma_wyswietlen_total || 0;
+  const transactions = summary.transaction_count || 0;
+  const profit = summary.total_profit || 0;
+
+  // ZNV = zysk netto / wyświetlenia
+  const znv = views > 0 ? profit / views : 0;
+  // ZN_T = zysk netto / transakcje
+  const znt = transactions > 0 ? profit / transactions : 0;
+
+  const profitColor = profit > 0 ? 'var(--success)' : 'var(--danger)';
+
   return `
     <div class="summary-30-days-metrics">
       <div class="metric-card">
-        <div class="metric-label">Sprzedano</div>
-        <div class="metric-value">${summary.total_sold_quantity} szt.</div>
-      </div>
-      <div class="metric-card revenue">
-        <div class="metric-label">Przychod</div>
-        <div class="metric-value" style="color: var(--info);">
-          ${formatCurrency(summary.total_revenue)}
-        </div>
-      </div>
-      <div class="metric-card commission">
-        <div class="metric-label">Prowizja SUC</div>
-        <div class="metric-value" style="color: var(--warning);">
-          ${formatCurrency(summary.total_commission_suc)}
-        </div>
-      </div>
-      <div class="metric-card commission">
-        <div class="metric-label">Prowizja FSF</div>
-        <div class="metric-value" style="color: ${summary.total_commission_fsf < 0 ? 'var(--info)' : 'var(--text-muted)'};">
-          ${formatCurrency(summary.total_commission_fsf)}
-        </div>
-      </div>
-      <div class="metric-card ${summary.total_profit > 0 ? 'profit' : 'loss'}">
-        <div class="metric-label">Zysk netto</div>
-        <div class="metric-value" style="color: ${summary.total_profit > 0 ? 'var(--success)' : 'var(--danger)'};">
-          ${formatCurrency(summary.total_profit)}
-        </div>
+        <div class="metric-label">Trans./Szt.</div>
+        <div class="metric-value">${transactions} / ${summary.total_sold_quantity}</div>
       </div>
       <div class="metric-card">
-        <div class="metric-label">Transakcji</div>
-        <div class="metric-value">${summary.transaction_count}</div>
+        <div class="metric-label">Przychod</div>
+        <div class="metric-value">${formatCurrency(summary.total_revenue)}</div>
+      </div>
+      <div class="metric-card commission">
+        <div class="metric-label">SUC</div>
+        <div class="metric-value" style="color: var(--warning);">${formatCurrency(summary.total_commission_suc)}</div>
+      </div>
+      <div class="metric-card commission">
+        <div class="metric-label">FSF</div>
+        <div class="metric-value" style="color: ${summary.total_commission_fsf < 0 ? 'var(--info)' : 'var(--text-muted)'};">${formatCurrency(summary.total_commission_fsf)}</div>
+      </div>
+      <div class="metric-card ${profit > 0 ? 'profit' : 'loss'}">
+        <div class="metric-label">Zysk</div>
+        <div class="metric-value" style="color: ${profitColor};">${formatCurrency(profit)}</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Zysk/Wys.</div>
+        <div class="metric-value" style="color: ${profitColor};">${znv.toFixed(2)} zl</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Zysk/Trans.</div>
+        <div class="metric-value" style="color: ${profitColor};">${formatCurrency(znt)}</div>
       </div>
     </div>
   `;
@@ -591,8 +650,8 @@ function renderOffersSection(byOffer, sygnatura) {
 
   return `
     <div class="offers-section">
-      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">
-        Szczegoly per aukcja (${offersArray.length})
+      <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">
+        Per aukcja (${offersArray.length})
       </div>
       ${offersArray.map(offer => renderOfferSection(offer, sygnatura)).join('')}
     </div>
@@ -604,41 +663,54 @@ function renderOffersSection(byOffer, sygnatura) {
  */
 function renderOfferSection(offer, sygnatura) {
   const profitColor = offer.profit > 0 ? 'var(--success)' : 'var(--danger)';
+  const transactionCount = offer.transactions?.length || 0;
 
   return `
     <div class="offer-section">
       <div class="offer-header" data-offer-toggle="${sygnatura}-${offer.id}">
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="offer-header-left">
           <span class="offer-expand-icon">▶</span>
-          <span class="text-mono" style="color: var(--text-muted);">#${offer.id}</span>
-          <span style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            ${truncateText(offer.offer_name, 50)}
-          </span>
+          <span class="offer-id">#${offer.id}</span>
+          <span class="offer-name">${truncateText(offer.offer_name, 40)}</span>
+          <span class="offer-trans">${transactionCount} / ${offer.sold_quantity}</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 12px; font-size: 12px;">
-          <span>${offer.sold_quantity} szt.</span>
-          <span class="text-mono" style="color: ${profitColor};">
-            ${formatCurrency(offer.profit)}
-          </span>
+        <div class="offer-header-right">
+          <span class="offer-revenue">${formatCurrency(offer.revenue)}</span>
+          <span class="offer-suc" style="color: var(--warning);">${formatCurrency(offer.commission_suc)}</span>
+          <span class="offer-fsf" style="color: var(--info);">${formatCurrency(offer.commission_fsf)}</span>
+          <span class="offer-profit" style="color: ${profitColor};">${formatCurrency(offer.profit)}</span>
         </div>
       </div>
       <div class="offer-content" style="display: none;">
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px;">
-          <div>
-            <div style="font-size: 11px; color: var(--text-muted);">Przychod</div>
-            <div class="text-mono">${formatCurrency(offer.revenue)}</div>
-          </div>
-          <div>
-            <div style="font-size: 11px; color: var(--text-muted);">Prowizja SUC</div>
-            <div class="text-mono" style="color: var(--warning);">${formatCurrency(offer.commission_suc)}</div>
-          </div>
-          <div>
-            <div style="font-size: 11px; color: var(--text-muted);">Prowizja FSF</div>
-            <div class="text-mono" style="color: var(--info);">${formatCurrency(offer.commission_fsf)}</div>
-          </div>
-        </div>
-        ${renderTransactionsList(offer.transactions, sygnatura, offer.id)}
+        ${renderOfferTransactions(offer.transactions)}
       </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje transakcje aukcji bezposrednio (bez zagniezdzenia)
+ */
+function renderOfferTransactions(transactions) {
+  if (!transactions || transactions.length === 0) {
+    return '<div class="text-muted" style="font-size: 12px; padding: 8px;">Brak transakcji</div>';
+  }
+
+  return `
+    <div class="offer-transactions">
+      <div class="transaction-row transaction-row-header">
+        <div class="transaction-left">
+          <span class="transaction-cell transaction-date">Data</span>
+          <span class="transaction-cell transaction-qty">Ilosc</span>
+          <span class="transaction-cell transaction-price">Cena</span>
+        </div>
+        <div class="transaction-right">
+          <span class="transaction-cell transaction-suc">SUC</span>
+          <span class="transaction-cell transaction-fsf">FSF</span>
+          <span class="transaction-cell transaction-profit">Zysk</span>
+        </div>
+      </div>
+      ${transactions.map(t => renderTransactionItem30Days(t)).join('')}
     </div>
   `;
 }
@@ -659,6 +731,18 @@ function renderTransactionsList(transactions, sygnatura, offerId) {
         <span>Transakcje (${transactions.length})</span>
       </div>
       <div class="transactions-list" style="display: none;">
+        <div class="transaction-row transaction-row-header">
+          <div class="transaction-left">
+            <span class="transaction-cell transaction-date">Data</span>
+            <span class="transaction-cell transaction-qty">Ilosc</span>
+            <span class="transaction-cell transaction-price">Cena</span>
+          </div>
+          <div class="transaction-right">
+            <span class="transaction-cell transaction-suc">SUC</span>
+            <span class="transaction-cell transaction-fsf">FSF</span>
+            <span class="transaction-cell transaction-profit">Zysk</span>
+          </div>
+        </div>
         ${transactions.map(t => renderTransactionItem30Days(t)).join('')}
       </div>
     </div>
@@ -672,17 +756,16 @@ function renderTransactionItem30Days(t) {
   const profitColor = t.profit > 0 ? 'var(--success)' : 'var(--danger)';
 
   return `
-    <div class="transaction-item">
-      <div style="display: flex; gap: 12px; align-items: center;">
-        <span class="text-muted">${t.date} ${t.time}</span>
-        <span>${t.quantity} szt.</span>
-        <span class="text-mono">${formatCurrency(t.total_price)}</span>
+    <div class="transaction-row">
+      <div class="transaction-left">
+        <span class="transaction-cell transaction-date">${t.date} ${t.time}</span>
+        <span class="transaction-cell transaction-qty">${t.quantity} szt.</span>
+        <span class="transaction-cell transaction-price">${formatCurrency(t.total_price)}</span>
       </div>
-      <div style="display: flex; gap: 12px; align-items: center;">
-        <span style="color: var(--warning);">${formatCurrency(t.commission_total)}</span>
-        <span class="text-mono" style="color: ${profitColor}; font-weight: 600;">
-          ${formatCurrency(t.profit)}
-        </span>
+      <div class="transaction-right">
+        <span class="transaction-cell transaction-suc" style="color: var(--warning);">${formatCurrency(t.commission_suc)}</span>
+        <span class="transaction-cell transaction-fsf" style="color: var(--info);">${formatCurrency(t.commission_fsf)}</span>
+        <span class="transaction-cell transaction-profit" style="color: ${profitColor};">${formatCurrency(t.profit)}</span>
       </div>
     </div>
   `;
@@ -700,26 +783,35 @@ function getSortIcon(field, currentField, currentDir) {
  * Renderuje skeleton loading
  */
 function renderSkeletons() {
-  // KPI skeletons
-  const kpiGrid = document.getElementById('kpiGrid');
-  kpiGrid.innerHTML = Array(4).fill(`
-    <div class="kpi-card">
-      <div class="skeleton skeleton-text" style="width: 40px; height: 28px; margin-bottom: 12px;"></div>
-      <div class="skeleton skeleton-title" style="width: 80%;"></div>
-      <div class="skeleton skeleton-text" style="width: 60%;"></div>
-    </div>
-  `).join('');
+  // Top products skeleton
+  const topProducts = document.getElementById('topProductsSection');
+  if (topProducts) {
+    topProducts.innerHTML = `
+      <div class="top-products-card">
+        <div class="skeleton" style="height: 180px;"></div>
+      </div>
+    `;
+  }
 
-  // Chart skeletons
-  document.getElementById('barChart').innerHTML = '<div class="skeleton" style="height: 250px;"></div>';
-  document.getElementById('donutChart').innerHTML = '<div class="skeleton" style="height: 250px; width: 250px; border-radius: 50%; margin: 0 auto;"></div>';
+  // Global summary skeleton
+  const globalSummary = document.getElementById('globalSummary');
+  if (globalSummary) {
+    globalSummary.innerHTML = `
+      <div class="global-summary-card">
+        <div class="skeleton" style="height: 80px; border-radius: 8px;"></div>
+      </div>
+    `;
+  }
 
   // Table skeleton
-  document.getElementById('productsTable').innerHTML = `
-    <div style="padding: 20px;">
-      ${Array(5).fill('<div class="skeleton skeleton-text" style="margin-bottom: 16px;"></div>').join('')}
-    </div>
-  `;
+  const productsTable = document.getElementById('productsTable');
+  if (productsTable) {
+    productsTable.innerHTML = `
+      <div style="padding: 20px;">
+        ${Array(5).fill('<div class="skeleton skeleton-text" style="margin-bottom: 16px;"></div>').join('')}
+      </div>
+    `;
+  }
 }
 
 /**
