@@ -189,7 +189,7 @@ function renderCharts(topProducts, markets) {
 /**
  * Renderuje tabele produktow
  */
-function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', searchQuery = '', activeOnly = false) {
+function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', searchQuery = '') {
   const container = document.getElementById('productsTable');
 
   // Filtruj produkty po wyszukiwaniu
@@ -201,14 +201,6 @@ function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', se
         return matchName || matchSignature;
       })
     : products;
-
-  // Filtruj produkty tylko z aktywnymi aukcjami
-  if (activeOnly) {
-    filteredProducts = filteredProducts.filter(p => {
-      const uniqueAuctions = getUniqueAuctions(p);
-      return uniqueAuctions.some(a => a.status === 'ACTIVE');
-    });
-  }
 
   // Aktualizuj licznik produktow w naglowku
   const tableTitle = document.querySelector('.table-title');
@@ -343,6 +335,10 @@ function renderProductDetails(product) {
   const auctions = product.aukcje_szczegolowo || {};
 
   return `
+    <!-- SEKCJA: Ostatnie 30 dni -->
+    ${renderSummary30Days(product)}
+
+    <!-- SEKCJA: Rynki -->
     <div class="markets-grid">
       ${Object.entries(markets).map(([marketId, marketData]) => {
         const marketAuctions = auctions[marketId] || [];
@@ -480,6 +476,214 @@ function renderAuctionItem(auction) {
       <a href="${auction.link}" target="_blank" rel="noopener noreferrer" class="link link-external" style="font-size: 12px;">
         Otworz
       </a>
+    </div>
+  `;
+}
+
+/**
+ * Formatuje walute (PLN)
+ */
+function formatCurrency(value) {
+  if (value === undefined || value === null) return '0.00 PLN';
+  return value.toFixed(2) + ' PLN';
+}
+
+/**
+ * Renderuje sekcje "Ostatnie 30 dni"
+ */
+function renderSummary30Days(product) {
+  const summary = product.summary_last_30_days;
+
+  // Brak danych
+  if (!summary) {
+    return `
+      <div class="summary-30-days">
+        <div class="summary-30-days-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="summary-expand-icon">▶</span>
+            <strong>📊 Ostatnie 30 dni</strong>
+          </div>
+        </div>
+        <div class="summary-30-days-content" style="display: none;">
+          <div class="empty-30-days">
+            ℹ️ Brak sprzedazy w ostatnich 30 dniach
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="summary-30-days">
+      <div class="summary-30-days-header" data-summary-toggle="${product.sygnatura}">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="summary-expand-icon">▶</span>
+          <strong>📊 Ostatnie 30 dni</strong>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span class="badge badge-success">${summary.total_sold_quantity} szt.</span>
+          <span class="text-mono" style="color: var(--success);">
+            ${formatCurrency(summary.total_profit)} zysku
+          </span>
+        </div>
+      </div>
+      <div class="summary-30-days-content" style="display: none;">
+        ${renderSummaryMetrics(summary)}
+        ${renderOffersSection(summary.by_offer, product.sygnatura)}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje metryki podsumowania 30 dni
+ */
+function renderSummaryMetrics(summary) {
+  return `
+    <div class="summary-30-days-metrics">
+      <div class="metric-card">
+        <div class="metric-label">Sprzedano</div>
+        <div class="metric-value">${summary.total_sold_quantity} szt.</div>
+      </div>
+      <div class="metric-card revenue">
+        <div class="metric-label">Przychod</div>
+        <div class="metric-value" style="color: var(--info);">
+          ${formatCurrency(summary.total_revenue)}
+        </div>
+      </div>
+      <div class="metric-card commission">
+        <div class="metric-label">Prowizja SUC</div>
+        <div class="metric-value" style="color: var(--warning);">
+          ${formatCurrency(summary.total_commission_suc)}
+        </div>
+      </div>
+      <div class="metric-card commission">
+        <div class="metric-label">Prowizja FSF</div>
+        <div class="metric-value" style="color: ${summary.total_commission_fsf < 0 ? 'var(--info)' : 'var(--text-muted)'};">
+          ${formatCurrency(summary.total_commission_fsf)}
+        </div>
+      </div>
+      <div class="metric-card ${summary.total_profit > 0 ? 'profit' : 'loss'}">
+        <div class="metric-label">Zysk netto</div>
+        <div class="metric-value" style="color: ${summary.total_profit > 0 ? 'var(--success)' : 'var(--danger)'};">
+          ${formatCurrency(summary.total_profit)}
+        </div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Transakcji</div>
+        <div class="metric-value">${summary.transaction_count}</div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje sekcje aukcji w 30 dniach
+ */
+function renderOffersSection(byOffer, sygnatura) {
+  if (!byOffer || Object.keys(byOffer).length === 0) {
+    return '';
+  }
+
+  const offersArray = Object.entries(byOffer)
+    .map(([id, data]) => ({ id, ...data }))
+    .sort((a, b) => b.sold_quantity - a.sold_quantity);
+
+  return `
+    <div class="offers-section">
+      <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase;">
+        Szczegoly per aukcja (${offersArray.length})
+      </div>
+      ${offersArray.map(offer => renderOfferSection(offer, sygnatura)).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Renderuje pojedyncza aukcje w sekcji 30 dni
+ */
+function renderOfferSection(offer, sygnatura) {
+  const profitColor = offer.profit > 0 ? 'var(--success)' : 'var(--danger)';
+
+  return `
+    <div class="offer-section">
+      <div class="offer-header" data-offer-toggle="${sygnatura}-${offer.id}">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="offer-expand-icon">▶</span>
+          <span class="text-mono" style="color: var(--text-muted);">#${offer.id}</span>
+          <span style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            ${truncateText(offer.offer_name, 50)}
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; font-size: 12px;">
+          <span>${offer.sold_quantity} szt.</span>
+          <span class="text-mono" style="color: ${profitColor};">
+            ${formatCurrency(offer.profit)}
+          </span>
+        </div>
+      </div>
+      <div class="offer-content" style="display: none;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px;">
+          <div>
+            <div style="font-size: 11px; color: var(--text-muted);">Przychod</div>
+            <div class="text-mono">${formatCurrency(offer.revenue)}</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-muted);">Prowizja SUC</div>
+            <div class="text-mono" style="color: var(--warning);">${formatCurrency(offer.commission_suc)}</div>
+          </div>
+          <div>
+            <div style="font-size: 11px; color: var(--text-muted);">Prowizja FSF</div>
+            <div class="text-mono" style="color: var(--info);">${formatCurrency(offer.commission_fsf)}</div>
+          </div>
+        </div>
+        ${renderTransactionsList(offer.transactions, sygnatura, offer.id)}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje liste transakcji
+ */
+function renderTransactionsList(transactions, sygnatura, offerId) {
+  if (!transactions || transactions.length === 0) {
+    return '<div class="text-muted" style="font-size: 12px;">Brak transakcji</div>';
+  }
+
+  return `
+    <div class="transactions-section">
+      <div class="transactions-header" data-transactions-toggle="${sygnatura}-${offerId}"
+           style="cursor: pointer; font-size: 12px; padding: 8px 0; border-top: 1px solid var(--border-color);">
+        <span class="transactions-expand-icon">▶</span>
+        <span>Transakcje (${transactions.length})</span>
+      </div>
+      <div class="transactions-list" style="display: none;">
+        ${transactions.map(t => renderTransactionItem30Days(t)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje pojedyncza transakcje w sekcji 30 dni
+ */
+function renderTransactionItem30Days(t) {
+  const profitColor = t.profit > 0 ? 'var(--success)' : 'var(--danger)';
+
+  return `
+    <div class="transaction-item">
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <span class="text-muted">${t.date} ${t.time}</span>
+        <span>${t.quantity} szt.</span>
+        <span class="text-mono">${formatCurrency(t.total_price)}</span>
+      </div>
+      <div style="display: flex; gap: 12px; align-items: center;">
+        <span style="color: var(--warning);">${formatCurrency(t.commission_total)}</span>
+        <span class="text-mono" style="color: ${profitColor}; font-weight: 600;">
+          ${formatCurrency(t.profit)}
+        </span>
+      </div>
     </div>
   `;
 }

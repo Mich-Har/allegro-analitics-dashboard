@@ -4,7 +4,7 @@
 
 Dane wejsciowe to tablica obiektow JSON, gdzie kazdy obiekt reprezentuje **jeden produkt** z wszystkimi jego aukcjami na roznych rynkach Allegro.
 
-**Zrodlo danych:** n8n webhook lub plik lokalny (`final_output_for_frontend.txt`)
+**Zrodlo danych:** n8n webhook lub plik lokalny (`final_output_for_frontend.txt`) (to jest aktualnie wykorzystywane)
 
 ---
 

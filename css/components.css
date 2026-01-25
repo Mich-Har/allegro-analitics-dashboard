@@ -740,3 +740,140 @@
     transform: translateY(0);
   }
 }
+
+/* ===========================================
+   SEKCJA OSTATNIE 30 DNI
+   =========================================== */
+
+.summary-30-days {
+  background: var(--bg-card);
+  border-radius: var(--radius-m);
+  border: 1px solid var(--border-color);
+  margin-bottom: var(--space-m);
+  overflow: hidden;
+}
+
+.summary-30-days-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-m);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.summary-30-days-header:hover {
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.summary-30-days-content {
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-m);
+  background: var(--bg-dark);
+}
+
+.summary-30-days-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-m);
+  margin-bottom: var(--space-m);
+}
+
+.metric-card {
+  background: var(--bg-card);
+  padding: var(--space-s) var(--space-m);
+  border-radius: var(--radius-s);
+  border-left: 3px solid var(--primary);
+}
+
+.metric-card.profit {
+  border-left-color: var(--success);
+}
+
+.metric-card.loss {
+  border-left-color: var(--danger);
+}
+
+.metric-card.commission {
+  border-left-color: var(--warning);
+}
+
+.metric-card.revenue {
+  border-left-color: var(--info);
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.metric-value {
+  font-size: 16px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+/* Per offer section */
+.offer-section {
+  background: var(--bg-card);
+  border-radius: var(--radius-s);
+  margin-bottom: var(--space-s);
+  border: 1px solid var(--border-color);
+}
+
+.offer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-s) var(--space-m);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.offer-header:hover {
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.offer-content {
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-m);
+  background: var(--bg-dark);
+}
+
+/* Transactions */
+.transactions-section {
+  margin-top: var(--space-s);
+}
+
+.transactions-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-s);
+}
+
+.transactions-list {
+  background: var(--bg-card);
+  border-radius: var(--radius-s);
+  margin-top: var(--space-s);
+}
+
+.transaction-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) var(--space-s);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+}
+
+.transaction-item:last-child {
+  border-bottom: none;
+}
+
+/* Empty state for 30 days */
+.empty-30-days {
+  text-align: center;
+  padding: var(--space-l);
+  color: var(--text-muted);
+}

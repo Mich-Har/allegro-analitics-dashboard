@@ -9,7 +9,6 @@ let currentFilters = {};
 let expandedProducts = new Set();
 let currentSearchQuery = '';
 let searchDebounceTimer = null;
-let activeOnlyFilter = false;
 
 /**
  * Inicjalizacja aplikacji
@@ -122,6 +121,30 @@ function attachEventListeners() {
     }
   });
 
+  // Rozwijanie sekcji 30 dni
+  document.addEventListener('click', (e) => {
+    const header = e.target.closest('.summary-30-days-header');
+    if (header) {
+      handleSummary30DaysExpand(header);
+    }
+  });
+
+  // Rozwijanie szczegolow aukcji w sekcji 30 dni
+  document.addEventListener('click', (e) => {
+    const header = e.target.closest('.offer-header');
+    if (header) {
+      handleOfferExpand(header);
+    }
+  });
+
+  // Rozwijanie transakcji w sekcji 30 dni
+  document.addEventListener('click', (e) => {
+    const header = e.target.closest('.transactions-header');
+    if (header) {
+      handleTransactionsExpand(header);
+    }
+  });
+
   // Przycisk "Zwin wszystko"
   document.addEventListener('click', (e) => {
     if (e.target.closest('#collapseAllBtn')) {
@@ -138,21 +161,6 @@ function attachEventListeners() {
       }, 300);
     }
   });
-
-  // Filtrowanie tylko aktywnych produktow
-  const activeOnlyCheckbox = document.getElementById('activeOnlyFilter');
-  if (activeOnlyCheckbox) {
-    activeOnlyCheckbox.addEventListener('change', (e) => {
-      activeOnlyFilter = e.target.checked;
-      renderProductsTable(
-        processedData.products,
-        currentSort.field,
-        currentSort.direction,
-        currentSearchQuery,
-        activeOnlyFilter
-      );
-    });
-  }
 
   // Zamykanie panelu bocznego
   document.addEventListener('click', (e) => {
@@ -240,8 +248,7 @@ function handleSort(field) {
     processedData.products,
     currentSort.field,
     currentSort.direction,
-    currentSearchQuery,
-    activeOnlyFilter
+    currentSearchQuery
   );
 
   // Re-attach expand listeners
@@ -329,6 +336,45 @@ function handleAuctionGroupExpand(header) {
 }
 
 /**
+ * Obsluga rozwijania sekcji 30 dni
+ */
+function handleSummary30DaysExpand(header) {
+  const section = header.closest('.summary-30-days');
+  const content = section.querySelector('.summary-30-days-content');
+  const icon = header.querySelector('.summary-expand-icon');
+
+  const isExpanded = content.style.display !== 'none';
+  content.style.display = isExpanded ? 'none' : 'block';
+  icon.textContent = isExpanded ? '▶' : '▼';
+}
+
+/**
+ * Obsluga rozwijania szczegolow aukcji w sekcji 30 dni
+ */
+function handleOfferExpand(header) {
+  const section = header.closest('.offer-section');
+  const content = section.querySelector('.offer-content');
+  const icon = header.querySelector('.offer-expand-icon');
+
+  const isExpanded = content.style.display !== 'none';
+  content.style.display = isExpanded ? 'none' : 'block';
+  icon.textContent = isExpanded ? '▶' : '▼';
+}
+
+/**
+ * Obsluga rozwijania transakcji w sekcji 30 dni
+ */
+function handleTransactionsExpand(header) {
+  const section = header.closest('.transactions-section');
+  const content = section.querySelector('.transactions-list');
+  const icon = header.querySelector('.transactions-expand-icon');
+
+  const isExpanded = content.style.display !== 'none';
+  content.style.display = isExpanded ? 'none' : 'block';
+  icon.textContent = isExpanded ? '▶' : '▼';
+}
+
+/**
  * Obsluga zwijania wszystkiego
  */
 function handleCollapseAll() {
@@ -344,6 +390,30 @@ function handleCollapseAll() {
     }
   });
   expandedProducts.clear();
+
+  // Zwin wszystkie sekcje 30 dni
+  document.querySelectorAll('.summary-30-days-content').forEach(content => {
+    content.style.display = 'none';
+  });
+  document.querySelectorAll('.summary-expand-icon').forEach(icon => {
+    icon.textContent = '▶';
+  });
+
+  // Zwin wszystkie aukcje w sekcji 30 dni
+  document.querySelectorAll('.offer-content').forEach(content => {
+    content.style.display = 'none';
+  });
+  document.querySelectorAll('.offer-expand-icon').forEach(icon => {
+    icon.textContent = '▶';
+  });
+
+  // Zwin wszystkie transakcje
+  document.querySelectorAll('.transactions-list').forEach(list => {
+    list.style.display = 'none';
+  });
+  document.querySelectorAll('.transactions-expand-icon').forEach(icon => {
+    icon.textContent = '▶';
+  });
 
   // Zwin wszystkie rynki
   document.querySelectorAll('.market-auctions-collapse').forEach(container => {
@@ -372,8 +442,7 @@ function handleSearch(query) {
     processedData.products,
     currentSort.field,
     currentSort.direction,
-    currentSearchQuery,
-    activeOnlyFilter
+    currentSearchQuery
   );
 }
 
