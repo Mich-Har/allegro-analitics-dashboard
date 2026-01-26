@@ -393,6 +393,42 @@ function getConversionStatus(conversion) {
 }
 
 /**
+ * Aktualizuje nazwe produktu przez webhook do n8n
+ * @param {string} sygnatura - Sygnatura produktu
+ * @param {string} newName - Nowa nazwa produktu
+ * @returns {Promise<boolean>} - true jesli sukces, false jesli blad
+ */
+async function updateProductName(sygnatura, newName) {
+  try {
+    const response = await fetch(CONFIG.WEBHOOK_UPDATE_PRODUCT_NAME, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sygnatura: sygnatura,
+        newName: newName,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Aktualizuj nazwe w lokalnych danych
+    const product = processedData.products.find(p => p.sygnatura === sygnatura);
+    if (product) {
+      product.product_name = newName;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Blad aktualizacji nazwy produktu:', error);
+    return false;
+  }
+}
+
+/**
  * Formatuje liczbe z separatorami
  */
 function formatNumber(num) {

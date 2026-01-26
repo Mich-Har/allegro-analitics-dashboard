@@ -93,11 +93,59 @@ function attachEventListeners() {
     }
   });
 
-  // Rozwijanie wierszy produktow
+  // Rozwijanie wierszy produktow (ignoruj klikniecia na elementy edycji)
   document.addEventListener('click', (e) => {
     const row = e.target.closest('.product-row');
-    if (row && !e.target.closest('a')) {
+    if (row && !e.target.closest('a') && !e.target.closest('.edit-name-btn') && !e.target.closest('.edit-name-container')) {
       handleProductExpand(row.dataset.sygnatura);
+    }
+  });
+
+  // Edycja nazwy produktu - klikniecie na ikone edycji
+  document.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.edit-name-btn');
+    if (editBtn) {
+      e.stopPropagation();
+      const sygnatura = editBtn.dataset.sygnatura;
+      const currentName = editBtn.dataset.currentName;
+      showEditNameField(sygnatura, currentName);
+    }
+  });
+
+  // Edycja nazwy produktu - zatwierdzenie (tick)
+  document.addEventListener('click', (e) => {
+    const confirmBtn = e.target.closest('.edit-name-confirm');
+    if (confirmBtn) {
+      e.stopPropagation();
+      const sygnatura = confirmBtn.dataset.sygnatura;
+      const input = document.querySelector(`.edit-name-input[data-sygnatura="${sygnatura}"]`);
+      if (input) {
+        confirmNameEdit(sygnatura, input.value);
+      }
+    }
+  });
+
+  // Edycja nazwy produktu - anulowanie (X)
+  document.addEventListener('click', (e) => {
+    const cancelBtn = e.target.closest('.edit-name-cancel');
+    if (cancelBtn) {
+      e.stopPropagation();
+      const sygnatura = cancelBtn.dataset.sygnatura;
+      cancelNameEdit(sygnatura);
+    }
+  });
+
+  // Edycja nazwy produktu - Enter/Escape w input
+  document.addEventListener('keydown', (e) => {
+    if (e.target.classList.contains('edit-name-input')) {
+      const sygnatura = e.target.dataset.sygnatura;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        confirmNameEdit(sygnatura, e.target.value);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        cancelNameEdit(sygnatura);
+      }
     }
   });
 
@@ -169,6 +217,14 @@ function attachEventListeners() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       closeSidePanel();
+    }
+  });
+
+  // Klikniecie na produkt w kartach statusu - przewin do produktu w tabeli
+  document.addEventListener('click', (e) => {
+    const statusItem = e.target.closest('.status-item');
+    if (statusItem && statusItem.dataset.sygnatura) {
+      scrollToProductAndHighlight(statusItem.dataset.sygnatura);
     }
   });
 }
@@ -571,6 +627,130 @@ function createParticles() {
     `;
     container.appendChild(particle);
   }
+}
+
+// ============================================
+// EDYCJA NAZWY PRODUKTU
+// ============================================
+
+/**
+ * Pokazuje pole edycji nazwy produktu
+ */
+function showEditNameField(sygnatura, currentName) {
+  const nameRow = document.querySelector(`.product-row[data-sygnatura="${sygnatura}"] .product-name-row`);
+  if (!nameRow) return;
+
+  // Zapisz oryginalna zawartosc
+  nameRow.dataset.originalHtml = nameRow.innerHTML;
+
+  // Zamien na pole edycji
+  nameRow.innerHTML = `
+    <div class="edit-name-container">
+      <input type="text"
+             class="edit-name-input"
+             data-sygnatura="${sygnatura}"
+             value="${currentName.replace(/"/g, '&quot;')}"
+             placeholder="Wpisz nowa nazwe..."
+             autofocus>
+      <span class="edit-name-confirm" data-sygnatura="${sygnatura}" title="Zatwierdz (Enter)">✓</span>
+      <span class="edit-name-cancel" data-sygnatura="${sygnatura}" title="Anuluj (Escape)">✗</span>
+    </div>
+  `;
+
+  // Focus na input
+  const input = nameRow.querySelector('.edit-name-input');
+  if (input) {
+    input.focus();
+    input.select();
+  }
+}
+
+/**
+ * Zatwierdza edycje nazwy produktu
+ */
+async function confirmNameEdit(sygnatura, newName) {
+  const nameRow = document.querySelector(`.product-row[data-sygnatura="${sygnatura}"] .product-name-row`);
+  if (!nameRow) return;
+
+  // Walidacja
+  if (!newName || newName.trim() === '') {
+    renderToast('Nazwa nie moze byc pusta', 'error');
+    return;
+  }
+
+  const trimmedName = newName.trim();
+
+  // Pokaz loading
+  const container = nameRow.querySelector('.edit-name-container');
+  if (container) {
+    container.innerHTML = `<span class="edit-name-loading">Zapisywanie...</span>`;
+  }
+
+  // Wyslij do n8n
+  const success = await updateProductName(sygnatura, trimmedName);
+
+  if (success) {
+    // Zaktualizuj UI z nowa nazwa
+    nameRow.innerHTML = `
+      <span class="product-name tooltip" data-tooltip="${trimmedName}" data-sygnatura="${sygnatura}">
+        ${truncateText(trimmedName, 60)}
+      </span>
+      <span class="edit-name-btn" data-sygnatura="${sygnatura}" data-current-name="${trimmedName.replace(/"/g, '&quot;')}" title="Edytuj nazwe">✏️</span>
+    `;
+    renderToast('Nazwa produktu zaktualizowana', 'success');
+  } else {
+    // Przywroc oryginalna zawartosc
+    if (nameRow.dataset.originalHtml) {
+      nameRow.innerHTML = nameRow.dataset.originalHtml;
+    }
+    renderToast('Blad zapisu nazwy produktu', 'error');
+  }
+}
+
+/**
+ * Anuluje edycje nazwy produktu
+ */
+function cancelNameEdit(sygnatura) {
+  const nameRow = document.querySelector(`.product-row[data-sygnatura="${sygnatura}"] .product-name-row`);
+  if (!nameRow || !nameRow.dataset.originalHtml) return;
+
+  // Przywroc oryginalna zawartosc
+  nameRow.innerHTML = nameRow.dataset.originalHtml;
+}
+
+// ============================================
+// PRZEWIJANIE DO PRODUKTU Z KART STATUSU
+// ============================================
+
+/**
+ * Przewija do produktu w tabeli i podswietla go
+ */
+function scrollToProductAndHighlight(sygnatura) {
+  const productRow = document.querySelector(`.product-row[data-sygnatura="${sygnatura}"]`);
+  if (!productRow) {
+    renderToast('Nie znaleziono produktu w tabeli', 'error');
+    return;
+  }
+
+  // Usun poprzednie podswietlenie
+  document.querySelectorAll('.product-row.highlight').forEach(row => {
+    row.classList.remove('highlight');
+  });
+
+  // Przewin do produktu z offsetem (zeby nie byl na samej gorze)
+  const offset = 100;
+  const elementPosition = productRow.getBoundingClientRect().top;
+  const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+  window.scrollTo({
+    top: offsetPosition,
+    behavior: 'smooth'
+  });
+
+  // Dodaj podswietlenie po zakonczeniu przewijania
+  setTimeout(() => {
+    productRow.classList.add('highlight');
+  }, 300);
 }
 
 // Utworz particles przy starcie

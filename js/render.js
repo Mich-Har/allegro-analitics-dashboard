@@ -160,7 +160,7 @@ function renderProductStatusCards(classifiedProducts) {
       }
 
       return `
-        <div class="status-item" style="animation-delay: ${index * 50}ms">
+        <div class="status-item" data-sygnatura="${product.sygnatura}" style="animation-delay: ${index * 50}ms">
           <div class="status-item-name">${name}</div>
           <div class="status-item-metrics">${metricHtml}</div>
         </div>
@@ -412,9 +412,12 @@ function renderProductRow(product, index, maxSales, maxViews) {
     <tr class="product-row ${inactiveClass}" data-sygnatura="${product.sygnatura}" data-index="${index}">
       <td>
         <div class="product-cell">
-          <span class="product-name tooltip" data-tooltip="${product.product_name || ''}">
-            ${truncateText(product.product_name || '-', 60)}
-          </span>
+          <div class="product-name-row">
+            <span class="product-name tooltip" data-tooltip="${product.product_name || ''}" data-sygnatura="${product.sygnatura}">
+              ${truncateText(product.product_name || '-', 60)}
+            </span>
+            <span class="edit-name-btn" data-sygnatura="${product.sygnatura}" data-current-name="${(product.product_name || '').replace(/"/g, '&quot;')}" title="Edytuj nazwe">✏️</span>
+          </div>
           <span class="product-signature">${product.sygnatura}</span>
         </div>
       </td>
@@ -621,8 +624,10 @@ function formatCurrency(value) {
 function renderSummary30Days(product) {
   const summary = product.summary_last_30_days;
 
-  // Brak danych
-  if (!summary) {
+  // Brak danych LUB brak transakcji
+  const hasNoData = !summary || (summary.transaction_count === 0 && summary.total_sold_quantity === 0);
+
+  if (hasNoData) {
     return `
       <div class="summary-30-days">
         <div class="summary-30-days-header">
@@ -833,7 +838,7 @@ function renderTransactionItem30Days(t) {
   return `
     <div class="transaction-row">
       <div class="transaction-left">
-        <span class="transaction-cell transaction-date">${t.date} ${t.time}</span>
+        <span class="transaction-cell transaction-date">${t.date.split('T')[0]} ${t.time}</span>
         <span class="transaction-cell transaction-qty">${t.quantity} szt.</span>
         <span class="transaction-cell transaction-price">${formatCurrency(t.total_price)}</span>
       </div>

@@ -23,6 +23,10 @@ const CONFIG = {
   // Wklej URL swojego webhooka z n8n
   WEBHOOK_URL: 'https://n8n-app.coolify.mihara.space/webhook/allegro-analytics',
 
+  // Webhook do aktualizacji nazwy produktu
+  // Wysyla POST z JSON: { sygnatura: "...", newName: "..." }
+  WEBHOOK_UPDATE_PRODUCT_NAME: 'https://n8n-app.coolify.mihara.space/webhook/bb37ea4d-949c-42d7-b1ee-ace06aea2a0f',
+
   // OPCJA 2: Lokalny plik (do testow)
   DATA_FILE: 'final_output_for_frontend.txt',
 
@@ -100,20 +104,20 @@ const CONFIG = {
     // Produkt do optymalizacji - popraw cene, opis, zdjecia
     // Warunki: WSZYSTKIE musza byc spelnione
     OPTIMIZE: {
-      VIEWS_PERCENTILE: 70,       // wyswietlenia >= percentyl 70% (duzo ruchu)
-      VIEWS_FIXED: 300,           // lub wyswietlenia >= 300 (fallback)
+      VIEWS_PERCENTILE: 40,       // wyswietlenia >= percentyl 70% (duzo ruchu)
+      VIEWS_FIXED: 250,           // lub wyswietlenia >= 300 (fallback)
       ZNT_MULTIPLIER: 0.7,        // ZNT < avg_ZNT * 0.7 (niski zysk/transakcja)
-      CONVERSION_MULTIPLIER: 0.6, // konwersja >= avg_konwersja * 0.6 (nie dramatyczna)
+      CONVERSION_MULTIPLIER: 0.4, // konwersja >= avg_konwersja * 0.6 (nie dramatyczna)
     },
 
     // === WYGAS ===
     // Produkt do wygaszenia - uwolnij uwage, budzet, miejsce
     // Warunki: MINIMUM 2 z 3 musza byc spelnione
     PHASE_OUT: {
-      ZNV_MULTIPLIER: 0.5,        // ZNV < avg_ZNV * 0.5 (niski zysk/wyswietlenie)
-      DRAINAGE_THRESHOLD: 0.25,   // drenaz >= 25% (wysoki drenaz prowizyjny)
+      ZNV_MULTIPLIER: 0.6,        // ZNV < avg_ZNV * 0.5 (niski zysk/wyswietlenie)
+      DRAINAGE_THRESHOLD: 0.1,   // drenaz >= 10% (wysoki drenaz prowizyjny)
       MIN_VIEWS: 200,             // wyswietlenia >= 200 (wiarygodnosc danych)
-      MIN_CONDITIONS: 2,          // minimum 2 z 3 warunkow
+      MIN_CONDITIONS: 1,          // minimum 2 z 3 warunkow
     },
   },
 
