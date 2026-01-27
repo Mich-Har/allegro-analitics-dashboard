@@ -94,10 +94,10 @@ const CONFIG = {
     // Produkt do skalowania - doloz budzet, promuj, kopiuj oferte
     // Warunki: WSZYSTKIE musza byc spelnione
     SCALE: {
-      ZNV_MULTIPLIER: 1.3,        // ZNV >= avg_ZNV * 1.3 (wysoki zysk/wyswietlenie)
       CONVERSION_MULTIPLIER: 1.0, // konwersja >= avg_konwersja (stabilna konwersja)
       MIN_VIEWS: 150,             // wyswietlenia >= 150 (wiarygodnosc danych)
       MIN_TRANSACTIONS: 5,        // transakcje >= 5 (wiarygodnosc danych)
+      ZNT_MULTIPLIER: 1.3,        // ZNT >= avg_ZNT * 1.3 (wysoki zysk/transakcje)
     },
 
     // === OPTYMALIZUJ ===
@@ -114,10 +114,10 @@ const CONFIG = {
     // Produkt do wygaszenia - uwolnij uwage, budzet, miejsce
     // Warunki: MINIMUM 2 z 3 musza byc spelnione
     PHASE_OUT: {
-      ZNV_MULTIPLIER: 0.6,        // ZNV < avg_ZNV * 0.5 (niski zysk/wyswietlenie)
       DRAINAGE_THRESHOLD: 0.1,   // drenaz >= 10% (wysoki drenaz prowizyjny)
       MIN_VIEWS: 200,             // wyswietlenia >= 200 (wiarygodnosc danych)
-      MIN_CONDITIONS: 1,          // minimum 2 z 3 warunkow
+      MIN_CONDITIONS: 1,          // minimum warunkow do spelnienia
+      ZNT_MULTIPLIER: 0.6,        // ZNT < avg_ZNT * 0.6 (niski zysk/transakcje)
     },
   },
 

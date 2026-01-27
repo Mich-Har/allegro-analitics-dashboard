@@ -85,10 +85,6 @@ function renderGlobalSummary(kpis) {
           <div class="global-summary-label">Zysk/Transakcja</div>
           <div class="global-summary-value">${formatCurrency(kpis.globalZNT)}</div>
         </div>
-        <div class="global-summary-section">
-          <div class="global-summary-label">Zysk/Wyswietlenie</div>
-          <div class="global-summary-value">${kpis.globalZNV.toFixed(2)} PLN</div>
-        </div>
       </div>
 
       <!-- Wiersz 2: Finanse -->
@@ -109,6 +105,19 @@ function renderGlobalSummary(kpis) {
           <div class="global-summary-label">Zysk netto</div>
           <div class="global-summary-value" style="color: ${profitColor};">${formatCurrency(kpis.totalProfit)}</div>
         </div>
+      </div>
+
+      <!-- Linia oddzielajaca i wyjasnienia -->
+      <div class="global-summary-legend">
+        <div class="global-summary-legend-item"><strong>Transakcje</strong> - Liczba zamowien zlozonych przez klientow</div>
+        <div class="global-summary-legend-item"><strong>Sprzedaz (szt.)</strong> - Laczna liczba sprzedanych sztuk produktow</div>
+        <div class="global-summary-legend-item"><strong>Konwersja</strong> - Procent wyswietlen, ktore zakonczyly sie zakupem</div>
+        <div class="global-summary-legend-item"><strong>Drenaz</strong> - Procent przychodu pochlanianego przez prowizje Allegro</div>
+        <div class="global-summary-legend-item"><strong>Zysk/Transakcja</strong> - Sredni zysk netto z jednego zamowienia</div>
+        <div class="global-summary-legend-item"><strong>Przychod</strong> - Calkowita wartosc sprzedazy przed potraconymi prowizjami</div>
+        <div class="global-summary-legend-item"><strong>Prowizja SUC</strong> - Prowizja od sprzedazy (Success Fee)</div>
+        <div class="global-summary-legend-item"><strong>Prowizja FSF</strong> - Prowizja od sprzedazy oferty wyrosnionej (Fulfillment Service Fee)</div>
+        <div class="global-summary-legend-item"><strong>Zysk netto</strong> - Przychod po odjeciu wszystkich prowizji Allegro</div>
       </div>
     </div>
   `;
@@ -141,7 +150,7 @@ function renderProductStatusCards(classifiedProducts) {
       switch (type) {
         case 'scale':
           metricHtml = `
-            <span class="status-metric">ZNV: ${metrics.znv.toFixed(2)}</span>
+            <span class="status-metric">ZNT: ${formatCurrency(metrics.znt)}</span>
             <span class="status-metric">${metrics.transactions} trans.</span>
           `;
           break;
@@ -154,7 +163,7 @@ function renderProductStatusCards(classifiedProducts) {
         case 'phaseOut':
           metricHtml = `
             <span class="status-metric">Drenaz: ${(metrics.drainage * 100).toFixed(1)}%</span>
-            <span class="status-metric">ZNV: ${metrics.znv.toFixed(3)}</span>
+            <span class="status-metric">ZNT: ${formatCurrency(metrics.znt)}</span>
           `;
           break;
       }
@@ -178,7 +187,7 @@ function renderProductStatusCards(classifiedProducts) {
           <span class="status-card-count">${scale.length}</span>
         </div>
         <div class="status-card-description">
-          Wysoki zysk/wyswietlenie i stabilna konwersja. Doloz budzet i promuj.
+          Wysoki zysk/transakcje i stabilna konwersja. Doloz budzet i promuj.
         </div>
         <div class="status-card-list">
           ${renderProductList(scale, 'scale')}
@@ -334,9 +343,6 @@ function renderProductsTable(products, sortField = 'sales', sortDir = 'desc', se
           <th data-sort="conversion" class="${sortField === 'conversion' ? 'sorted' : ''}">
             Konwersja <span class="sort-icon">${getSortIcon('conversion', sortField, sortDir)}</span>
           </th>
-          <th data-sort="znv" class="${sortField === 'znv' ? 'sorted' : ''}">
-            Zysk/Wyświetlenia <span class="sort-icon">${getSortIcon('znv', sortField, sortDir)}</span>
-          </th>
           <th data-sort="znt" class="${sortField === 'znt' ? 'sorted' : ''}">
             Zysk/Transakcja <span class="sort-icon">${getSortIcon('znt', sortField, sortDir)}</span>
           </th>
@@ -394,13 +400,11 @@ function renderProductRow(product, index, maxSales, maxViews) {
   const activeConversion = activeViews > 0 ? (activeSales / activeViews) * 100 : 0;
   const conversionStatus = getConversionStatus(activeConversion);
 
-  // Oblicz ZNV i ZNT z danych 30-dniowych
+  // Oblicz ZNT z danych 30-dniowych
   const summary30 = product.summary_last_30_days;
   const profit30 = summary30?.total_profit || 0;
-  const views30 = product.podsumowanie_globalne?.suma_wyswietlen_total || 0;
   const transactions30 = summary30?.transaction_count || 0;
 
-  const znv = views30 > 0 ? profit30 / views30 : 0;
   const znt = transactions30 > 0 ? profit30 / transactions30 : 0;
   const profitColor = profit30 >= 0 ? 'var(--success)' : 'var(--danger)';
 
@@ -433,9 +437,6 @@ function renderProductRow(product, index, maxSales, maxViews) {
         </span>
       </td>
       <td style="text-align: right;">
-        <span class="text-mono" style="color: ${profitColor};">${znv.toFixed(2)}</span>
-      </td>
-      <td style="text-align: right;">
         <span class="text-mono" style="color: ${profitColor};">${znt.toFixed(2)}</span>
       </td>
       <td style="text-align: right;">
@@ -448,7 +449,7 @@ function renderProductRow(product, index, maxSales, maxViews) {
       </td>
     </tr>
     <tr class="expanded-content" id="expanded-${product.sygnatura}" style="display: none;">
-      <td colspan="8">
+      <td colspan="7">
         <div class="expanded-inner">
           ${renderProductDetails(product)}
         </div>
@@ -671,13 +672,10 @@ function renderSummary30Days(product) {
  * Renderuje metryki podsumowania 30 dni
  */
 function renderSummaryMetrics(summary, product) {
-  const views = product.podsumowanie_globalne?.suma_wyswietlen_total || 0;
   const transactions = summary.transaction_count || 0;
   const profit = summary.total_profit || 0;
 
-  // ZNV = zysk netto / wyświetlenia
-  const znv = views > 0 ? profit / views : 0;
-  // ZN_T = zysk netto / transakcje
+  // ZNT = zysk netto / transakcje
   const znt = transactions > 0 ? profit / transactions : 0;
 
   const profitColor = profit > 0 ? 'var(--success)' : 'var(--danger)';
@@ -703,10 +701,6 @@ function renderSummaryMetrics(summary, product) {
       <div class="metric-card ${profit > 0 ? 'profit' : 'loss'}">
         <div class="metric-label">Zysk</div>
         <div class="metric-value" style="color: ${profitColor};">${formatCurrency(profit)}</div>
-      </div>
-      <div class="metric-card">
-        <div class="metric-label">Zysk/Wys.</div>
-        <div class="metric-value" style="color: ${profitColor};">${znv.toFixed(2)} zl</div>
       </div>
       <div class="metric-card">
         <div class="metric-label">Zysk/Trans.</div>

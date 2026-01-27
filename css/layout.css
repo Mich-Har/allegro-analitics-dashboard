@@ -279,6 +279,25 @@ body {
   white-space: nowrap;
 }
 
+.global-summary-legend {
+  border-top: 1px solid var(--border-color);
+  margin-top: 16px;
+  padding-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 4px 24px;
+}
+
+.global-summary-legend-item {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.global-summary-legend-item strong {
+  color: var(--text-secondary);
+}
+
 /* ===== TABLE SECTION ===== */
 .table-section {
   background: var(--bg-card);
@@ -347,6 +366,7 @@ body {
   text-align: right;
 }
 
+
 /* Szerokosci kolumn */
 .products-table th:nth-child(1),
 .products-table td:nth-child(1) { width: 200px; }  /* Produkt */
@@ -359,11 +379,11 @@ body {
 .products-table th:nth-child(5),
 .products-table td:nth-child(5) { width: 70px; }   /* Zysk/Wys. */
 .products-table th:nth-child(6),
-.products-table td:nth-child(6) { width: 75px; }   /* Zysk/Trans. */
+.products-table td:nth-child(6) { width: 55px; }   /* Zysk/Trans. */
 .products-table th:nth-child(7),
-.products-table td:nth-child(7) { width: 55px; }   /* Magazyn */
+.products-table td:nth-child(7) { width: 45px; text-align: center;}   /* Magazyn */
 .products-table th:nth-child(8),
-.products-table td:nth-child(8) { width: 50px; text-align: center;}   /* Aukcje */
+.products-table td:nth-child(8) { width: 60px; text-align: center;}   /* Aukcje */
 
 .products-table th:hover {
   background: var(--border-light);

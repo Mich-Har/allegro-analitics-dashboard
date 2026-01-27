@@ -737,20 +737,16 @@ function scrollToProductAndHighlight(sygnatura) {
     row.classList.remove('highlight');
   });
 
-  // Przewin do produktu z offsetem (zeby nie byl na samej gorze)
-  const offset = 100;
-  const elementPosition = productRow.getBoundingClientRect().top;
-  const offsetPosition = elementPosition + window.pageYOffset - offset;
-
-  window.scrollTo({
-    top: offsetPosition,
-    behavior: 'smooth'
+  // Przewin do produktu - uzyj scrollIntoView aby zawsze byl widoczny
+  productRow.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
   });
 
   // Dodaj podswietlenie po zakonczeniu przewijania
   setTimeout(() => {
     productRow.classList.add('highlight');
-  }, 300);
+  }, 500);
 }
 
 // Utworz particles przy starcie
