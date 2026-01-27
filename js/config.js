@@ -27,6 +27,16 @@ const CONFIG = {
   // Wysyla POST z JSON: { sygnatura: "...", newName: "..." }
   WEBHOOK_UPDATE_PRODUCT_NAME: 'https://n8n-app.coolify.mihara.space/webhook/bb37ea4d-949c-42d7-b1ee-ace06aea2a0f',
 
+  // Webhook do pobierania danych produktu za okres
+  WEBHOOK_PRODUCT_PERIOD: 'https://n8n-app.coolify.mihara.space/webhook/product-period-data',
+
+  // Webhook do zapisu kosztow produktu
+  WEBHOOK_UPDATE_PRODUCT_COSTS: 'https://n8n-app.coolify.mihara.space/webhook/ece780bf-930d-4a9a-81b0-ba698c2bcc7d',
+
+  // Domyslne stawki podatkowe
+  DEFAULT_VAT_RATE: 23,
+  DEFAULT_INCOME_TAX_RATE: 12,
+
   // OPCJA 2: Lokalny plik (do testow)
   DATA_FILE: 'final_output_for_frontend.txt',
 
@@ -146,6 +156,7 @@ const CONFIG = {
 // Freeze config to prevent modifications
 Object.freeze(CONFIG);
 Object.freeze(CONFIG.CONVERSION_THRESHOLDS);
+// Note: CONFIG is frozen but we still read DEFAULT_VAT_RATE and DEFAULT_INCOME_TAX_RATE from it
 Object.freeze(CONFIG.MARKETS);
 Object.freeze(CONFIG.MARKET_COLORS);
 Object.freeze(CONFIG.CHART_COLORS);

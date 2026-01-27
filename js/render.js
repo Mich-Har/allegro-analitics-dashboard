@@ -620,49 +620,478 @@ function formatCurrency(value) {
 }
 
 /**
- * Renderuje sekcje "Ostatnie 30 dni"
+ * Renderuje sekcje "Szczegoly sprzedazy" (zamiennik "Ostatnie 30 dni")
  */
 function renderSummary30Days(product) {
   const summary = product.summary_last_30_days;
-
-  // Brak danych LUB brak transakcji
   const hasNoData = !summary || (summary.transaction_count === 0 && summary.total_sold_quantity === 0);
 
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+
+  // Koszty z danych produktu (jesli backend je zwraca w glownym jsonie)
+  const costs = product.product_costs || null;
+
+  // Przygotuj poczatkowe dane okresu z summary_last_30_days
+  let initialPeriodHtml = '';
   if (hasNoData) {
-    return `
-      <div class="summary-30-days">
-        <div class="summary-30-days-header">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <span class="summary-expand-icon">▶</span>
-            <strong>📊 Ostatnie 30 dni</strong>
-          </div>
-        </div>
-        <div class="summary-30-days-content" style="display: none;">
-          <div class="empty-30-days">
-            ℹ️ Brak sprzedazy w ostatnich 30 dniach
-          </div>
-        </div>
-      </div>
-    `;
+    initialPeriodHtml = '<div class="empty-30-days">Brak sprzedazy w biezacym miesiacu</div>';
+  } else {
+    // Uzyj istniejacych danych summary_last_30_days jako poczatkowych
+    const initialData = {
+      ...summary,
+      _sygnatura: product.sygnatura,
+    };
+    initialPeriodHtml = renderPeriodData(initialData, costs);
   }
 
   return `
-    <div class="summary-30-days">
+    <div class="summary-30-days" data-sygnatura="${product.sygnatura}">
       <div class="summary-30-days-header" data-summary-toggle="${product.sygnatura}">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span class="summary-expand-icon">▶</span>
-          <strong>📊 Ostatnie 30 dni</strong>
+          <strong>Szczegoly sprzedazy</strong>
         </div>
         <div style="display: flex; align-items: center; gap: 12px;">
-          <span class="badge badge-success">${summary.total_sold_quantity} szt.</span>
-          <span class="text-mono" style="color: var(--success);">
-            ${formatCurrency(summary.total_profit)} zysku
-          </span>
+          ${hasNoData ? '' : `
+            <span class="badge badge-success">${summary.total_sold_quantity} szt.</span>
+            <span class="text-mono" style="color: var(--success);">
+              ${formatCurrency(summary.total_profit)} zysku
+            </span>
+          `}
         </div>
       </div>
       <div class="summary-30-days-content" style="display: none;">
-        ${renderSummaryMetrics(summary, product)}
-        ${renderOffersSection(summary.by_offer, product.sygnatura)}
+        ${renderPeriodSelector(product.sygnatura, null, currentYear, currentMonth)}
+        <div class="product-costs-section" data-sygnatura="${product.sygnatura}">
+          ${renderProductCostsView(product.sygnatura, costs)}
+        </div>
+        <div class="period-data-container" data-sygnatura="${product.sygnatura}">
+          ${initialPeriodHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje selektor okresu (rok + miesiac)
+ */
+function renderPeriodSelector(sygnatura, availablePeriods, selectedYear, selectedMonth) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  // Domyslnie lata: currentYear-2..currentYear
+  const years = availablePeriods?.years || [currentYear - 2, currentYear - 1, currentYear];
+  const monthsWithData = availablePeriods?.months_with_data || [];
+
+  const monthNames = [
+    'Styczen', 'Luty', 'Marzec', 'Kwiecien', 'Maj', 'Czerwiec',
+    'Lipiec', 'Sierpien', 'Wrzesien', 'Pazdziernik', 'Listopad', 'Grudzien'
+  ];
+
+  const yearOptions = years.map(y =>
+    `<option value="${y}" ${y === selectedYear ? 'selected' : ''}>${y}</option>`
+  ).join('');
+
+  const monthOptions = [`<option value="0" ${selectedMonth === 0 ? 'selected' : ''}>Caly rok</option>`]
+    .concat(monthNames.map((name, i) => {
+      const m = i + 1;
+      const key = `${selectedYear}-${String(m).padStart(2, '0')}`;
+      const disabled = monthsWithData.length > 0 && !monthsWithData.includes(key) ? 'disabled' : '';
+      return `<option value="${m}" ${m === selectedMonth ? 'selected' : ''} ${disabled}>${name}</option>`;
+    }))
+    .join('');
+
+  return `
+    <div class="period-selector" data-sygnatura="${sygnatura}">
+      <select class="period-select period-year-select" data-sygnatura="${sygnatura}" data-type="year">
+        ${yearOptions}
+      </select>
+      <select class="period-select period-month-select" data-sygnatura="${sygnatura}" data-type="month">
+        ${monthOptions}
+      </select>
+      <button class="btn btn-primary period-load-btn" data-sygnatura="${sygnatura}" style="padding: 4px 12px; font-size: 12px;">
+        Zaladuj
+      </button>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje sekcje kosztow produktu (tryb podgladu)
+ */
+function renderProductCostsView(sygnatura, costs) {
+  const purchaseGross = costs?.purchase_price_gross;
+  const vatRate = costs?.vat_rate ?? CONFIG.DEFAULT_VAT_RATE;
+  const incomeTaxRate = costs?.income_tax_rate ?? CONFIG.DEFAULT_INCOME_TAX_RATE;
+  const storageCost = costs?.storage_cost_per_unit;
+
+  return `
+    <div class="costs-header">
+      <strong style="font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Koszty produktu</strong>
+      <button class="btn btn-ghost costs-edit-btn" data-sygnatura="${sygnatura}" style="padding: 2px 8px; font-size: 11px;">Edytuj</button>
+    </div>
+    <div class="costs-fields">
+      <div class="costs-field">
+        <span class="costs-field-label">Cena zakupu brutto</span>
+        <span class="costs-field-value">${purchaseGross != null ? purchaseGross.toFixed(2) + ' zl' : 'BRAK'}</span>
+      </div>
+      <div class="costs-field">
+        <span class="costs-field-label">Stawka VAT</span>
+        <span class="costs-field-value">${vatRate}%</span>
+      </div>
+      <div class="costs-field">
+        <span class="costs-field-label">Podatek dochodowy</span>
+        <span class="costs-field-value">${incomeTaxRate}%</span>
+      </div>
+      <div class="costs-field">
+        <span class="costs-field-label">Koszt magazynu/szt.</span>
+        <span class="costs-field-value">${storageCost != null ? storageCost.toFixed(2) + ' zl' : 'BRAK'}</span>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje sekcje kosztow produktu (tryb edycji)
+ */
+function renderProductCostsEdit(sygnatura, costs) {
+  const purchaseGross = costs?.purchase_price_gross ?? '';
+  const vatRate = costs?.vat_rate ?? CONFIG.DEFAULT_VAT_RATE;
+  const incomeTaxRate = costs?.income_tax_rate ?? CONFIG.DEFAULT_INCOME_TAX_RATE;
+  const storageCost = costs?.storage_cost_per_unit ?? '';
+
+  return `
+    <div class="costs-header">
+      <strong style="font-size: 11px; text-transform: uppercase; color: var(--text-muted);">Koszty produktu</strong>
+      <div style="display: flex; gap: 4px;">
+        <button class="btn btn-primary costs-save-btn" data-sygnatura="${sygnatura}" style="padding: 2px 8px; font-size: 11px;">Zapisz</button>
+        <button class="btn btn-ghost costs-cancel-btn" data-sygnatura="${sygnatura}" style="padding: 2px 8px; font-size: 11px;">Anuluj</button>
+      </div>
+    </div>
+    <div class="costs-fields costs-edit-mode">
+      <div class="costs-field">
+        <span class="costs-field-label">Cena zakupu brutto</span>
+        <div class="costs-field-input-wrap">
+          <input type="number" step="0.01" class="costs-input" data-field="purchase_price_gross" value="${purchaseGross}" placeholder="0.00"> zl
+        </div>
+      </div>
+      <div class="costs-field">
+        <span class="costs-field-label">Stawka VAT</span>
+        <div class="costs-field-input-wrap">
+          <input type="number" step="1" class="costs-input" data-field="vat_rate" value="${vatRate}" placeholder="23"> %
+        </div>
+      </div>
+      <div class="costs-field">
+        <span class="costs-field-label">Podatek dochodowy</span>
+        <div class="costs-field-input-wrap">
+          <input type="number" step="1" class="costs-input" data-field="income_tax_rate" value="${incomeTaxRate}" placeholder="12"> %
+        </div>
+      </div>
+      <div class="costs-field">
+        <span class="costs-field-label">Koszt magazynu/szt.</span>
+        <div class="costs-field-input-wrap">
+          <input type="number" step="0.01" class="costs-input" data-field="storage_cost_per_unit" value="${storageCost}" placeholder="0.00"> zl
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje pelne dane okresu (metryki + per aukcja)
+ */
+function renderPeriodData(periodData, costs) {
+  if (!periodData) {
+    return '<div class="empty-30-days">Brak danych dla wybranego okresu</div>';
+  }
+
+  const summary = periodData;
+  const hasNoData = summary.transaction_count === 0 && summary.total_sold_quantity === 0;
+
+  if (hasNoData) {
+    return '<div class="empty-30-days">Brak sprzedazy w wybranym okresie</div>';
+  }
+
+  const hasCosts = costs && costs.purchase_price_gross != null;
+
+  // All metrics in grouped layout
+  let html = renderGroupedMetrics(summary, hasCosts ? costs : null);
+
+  // Per offer section
+  html += renderOffersSectionExtended(summary.by_offer, summary._sygnatura || '', costs);
+
+  return html;
+}
+
+/**
+ * Renderuje wszystkie metryki w grupach tematycznych
+ */
+function renderGroupedMetrics(summary, costs) {
+  const transactions = summary.transaction_count || 0;
+  const qty = summary.total_sold_quantity || 0;
+  const revenue = summary.total_revenue || 0;
+  const suc = summary.total_commission_suc || 0;
+  const fsf = summary.total_commission_fsf || 0;
+  const profit = summary.total_profit || 0;
+  const znt = transactions > 0 ? profit / transactions : 0;
+  const profitColor = profit > 0 ? 'var(--success)' : 'var(--danger)';
+
+  let html = '';
+
+  // === GRUPA 1: Sprzedaz ===
+  html += `
+    <div class="metrics-group">
+      <div class="metrics-group-label">Sprzedaz</div>
+      <div class="metrics-group-grid">
+        <div class="metric-card">
+          <div class="metric-label">Trans. / Szt.</div>
+          <div class="metric-value">${transactions} / ${qty}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Przychod brutto</div>
+          <div class="metric-value">${formatCurrency(revenue)}</div>
+        </div>
+        <div class="metric-card commission">
+          <div class="metric-label">Prowizja SUC</div>
+          <div class="metric-value" style="color: var(--warning);">${formatCurrency(suc)}</div>
+        </div>
+        <div class="metric-card commission">
+          <div class="metric-label">Prowizja FSF</div>
+          <div class="metric-value" style="color: ${fsf < 0 ? 'var(--info)' : 'var(--text-muted)'};">${formatCurrency(fsf)}</div>
+        </div>
+        <div class="metric-card ${profit > 0 ? 'profit' : 'loss'}">
+          <div class="metric-label">Zysk (po prowizjach)</div>
+          <div class="metric-value" style="color: ${profitColor};">${formatCurrency(profit)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Zysk / Trans.</div>
+          <div class="metric-value" style="color: ${profitColor};">${formatCurrency(znt)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Jesli brak kosztow — koniec
+  if (!costs || costs.purchase_price_gross == null) return html;
+
+  const ext = calculateExtendedMetrics({
+    qty,
+    revenue,
+    suc,
+    fsf,
+    purchase_gross: costs.purchase_price_gross,
+    vat_rate: costs.vat_rate ?? CONFIG.DEFAULT_VAT_RATE,
+    tax_rate: costs.income_tax_rate ?? CONFIG.DEFAULT_INCOME_TAX_RATE,
+    storage_unit: costs.storage_cost_per_unit,
+  });
+  if (!ext) return html;
+
+  const netProfitColor = ext.netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+  const marginColor = ext.netMargin >= 0 ? 'var(--success)' : 'var(--danger)';
+
+  // === GRUPA 2: VAT ===
+  html += `
+    <div class="metrics-group">
+      <div class="metrics-group-label">VAT</div>
+      <div class="metrics-group-grid">
+        <div class="metric-card revenue">
+          <div class="metric-label">VAT sprzedazowy</div>
+          <div class="metric-value">${formatCurrency(ext.vatSales)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">VAT zakupowy</div>
+          <div class="metric-value">${formatCurrency(ext.vatPurchase)}</div>
+        </div>
+        <div class="metric-card ${ext.vatToPay > 0 ? 'loss' : 'profit'}">
+          <div class="metric-label">VAT do zaplaty</div>
+          <div class="metric-value">${formatCurrency(ext.vatToPay)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // === GRUPA 3: Koszty ===
+  html += `
+    <div class="metrics-group">
+      <div class="metrics-group-label">Koszty</div>
+      <div class="metrics-group-grid">
+        <div class="metric-card">
+          <div class="metric-label">Sprzedaz netto</div>
+          <div class="metric-value">${formatCurrency(ext.salesNet)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Zakup netto</div>
+          <div class="metric-value">${formatCurrency(ext.purchaseNet)}</div>
+        </div>
+        <div class="metric-card commission">
+          <div class="metric-label">Prowizja Allegro</div>
+          <div class="metric-value" style="color: var(--warning);">${formatCurrency(ext.commissionTotal)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Koszt magazynowy</div>
+          <div class="metric-value">${formatCurrency(ext.storageCost)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Podatek dochodowy</div>
+          <div class="metric-value">${formatCurrency(ext.incomeTax)}</div>
+        </div>
+        <div class="metric-card commission">
+          <div class="metric-label">Koszty calkowite</div>
+          <div class="metric-value">${formatCurrency(ext.totalCosts)}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // === GRUPA 4: Wynik ===
+  html += `
+    <div class="metrics-group metrics-group-result">
+      <div class="metrics-group-label">Wynik</div>
+      <div class="metrics-group-grid">
+        <div class="metric-card ${ext.netProfit >= 0 ? 'profit' : 'loss'}">
+          <div class="metric-label">Zysk netto</div>
+          <div class="metric-value" style="color: ${netProfitColor};">${formatCurrency(ext.netProfit)}</div>
+        </div>
+        <div class="metric-card ${ext.netProfitPerUnit >= 0 ? 'profit' : 'loss'}">
+          <div class="metric-label">Zysk netto / szt.</div>
+          <div class="metric-value" style="color: ${netProfitColor};">${formatCurrency(ext.netProfitPerUnit)}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Marza netto</div>
+          <div class="metric-value" style="color: ${marginColor};">${ext.netMargin.toFixed(2)}%</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  return html;
+}
+
+/**
+ * Renderuje sekcje aukcji z transakcjami (zysk netto per transakcja)
+ */
+function renderOffersSectionExtended(byOffer, sygnatura, costs) {
+  if (!byOffer || Object.keys(byOffer).length === 0) {
+    return '';
+  }
+
+  const offersArray = Object.entries(byOffer)
+    .map(([id, data]) => ({ id, ...data }))
+    .sort((a, b) => b.sold_quantity - a.sold_quantity);
+
+  return `
+    <div class="offers-section">
+      <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase;">
+        Per aukcja (${offersArray.length})
+      </div>
+      ${offersArray.map(offer => renderOfferSectionExtended(offer, sygnatura, costs)).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Renderuje pojedyncza aukcje — transakcje z zyskiem netto per wiersz
+ */
+function renderOfferSectionExtended(offer, sygnatura, costs) {
+  const profitColor = offer.profit > 0 ? 'var(--success)' : 'var(--danger)';
+  const transactionCount = offer.transactions?.length || 0;
+
+  return `
+    <div class="offer-section">
+      <div class="offer-header" data-offer-toggle="${sygnatura}-${offer.id}">
+        <div class="offer-header-left">
+          <span class="offer-expand-icon">▶</span>
+          <span class="offer-id">#${offer.id}</span>
+          <span class="offer-name">${truncateText(offer.offer_name, 40)}</span>
+          <span class="offer-trans">${transactionCount} / ${offer.sold_quantity}</span>
+          ${offer.price ? `<span class="text-mono" style="font-size: 10px; color: var(--text-muted);">${offer.price.toFixed(2)} zl/szt</span>` : ''}
+        </div>
+        <div class="offer-header-right">
+          <span class="offer-revenue">${formatCurrency(offer.revenue)}</span>
+          <span class="offer-suc" style="color: var(--warning);">${formatCurrency(offer.commission_suc)}</span>
+          <span class="offer-fsf" style="color: var(--info);">${formatCurrency(offer.commission_fsf)}</span>
+          <span class="offer-profit" style="color: ${profitColor};">${formatCurrency(offer.profit)}</span>
+        </div>
+      </div>
+      <div class="offer-content" style="display: none;">
+        ${renderOfferTransactionsExtended(offer.transactions, costs)}
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renderuje transakcje aukcji z dodatkowa kolumna "Zysk netto"
+ */
+function renderOfferTransactionsExtended(transactions, costs) {
+  if (!transactions || transactions.length === 0) {
+    return '<div class="text-muted" style="font-size: 12px; padding: 8px;">Brak transakcji</div>';
+  }
+
+  const hasCosts = costs && costs.purchase_price_gross != null;
+
+  return `
+    <div class="offer-transactions">
+      <div class="transaction-row transaction-row-header">
+        <div class="transaction-left">
+          <span class="transaction-cell transaction-date">Data</span>
+          <span class="transaction-cell transaction-qty">Ilosc</span>
+          <span class="transaction-cell transaction-price">Cena</span>
+        </div>
+        <div class="transaction-right">
+          <span class="transaction-cell transaction-suc">SUC</span>
+          <span class="transaction-cell transaction-fsf">FSF</span>
+          <span class="transaction-cell transaction-profit">Zysk</span>
+          ${hasCosts ? '<span class="transaction-cell transaction-net-profit">Zysk netto</span>' : ''}
+        </div>
+      </div>
+      ${transactions.map(t => renderTransactionItemExtended(t, costs)).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Renderuje pojedyncza transakcje z zyskiem netto
+ */
+function renderTransactionItemExtended(t, costs) {
+  const profitColor = t.profit > 0 ? 'var(--success)' : 'var(--danger)';
+  const hasCosts = costs && costs.purchase_price_gross != null;
+
+  let netProfitHtml = '';
+  if (hasCosts) {
+    const ext = calculateExtendedMetrics({
+      qty: t.quantity,
+      revenue: t.total_price,
+      suc: t.commission_suc,
+      fsf: t.commission_fsf,
+      purchase_gross: costs.purchase_price_gross,
+      vat_rate: costs.vat_rate ?? CONFIG.DEFAULT_VAT_RATE,
+      tax_rate: costs.income_tax_rate ?? CONFIG.DEFAULT_INCOME_TAX_RATE,
+      storage_unit: costs.storage_cost_per_unit,
+    });
+    if (ext) {
+      const npColor = ext.netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+      netProfitHtml = `<span class="transaction-cell transaction-net-profit" style="color: ${npColor};">${formatCurrency(ext.netProfit)}</span>`;
+    } else {
+      netProfitHtml = '<span class="transaction-cell transaction-net-profit">-</span>';
+    }
+  }
+
+  return `
+    <div class="transaction-row">
+      <div class="transaction-left">
+        <span class="transaction-cell transaction-date">${t.date.split('T')[0]} ${t.time}</span>
+        <span class="transaction-cell transaction-qty">${t.quantity} szt.</span>
+        <span class="transaction-cell transaction-price">${formatCurrency(t.total_price)}</span>
+      </div>
+      <div class="transaction-right">
+        <span class="transaction-cell transaction-suc" style="color: var(--warning);">${formatCurrency(t.commission_suc)}</span>
+        <span class="transaction-cell transaction-fsf" style="color: var(--info);">${formatCurrency(t.commission_fsf)}</span>
+        <span class="transaction-cell transaction-profit" style="color: ${profitColor};">${formatCurrency(t.profit)}</span>
+        ${netProfitHtml}
       </div>
     </div>
   `;

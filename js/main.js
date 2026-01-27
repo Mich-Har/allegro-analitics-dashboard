@@ -173,6 +173,43 @@ function attachEventListeners() {
     }
   });
 
+  // Przycisk "Zaladuj" dane okresu
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.period-load-btn');
+    if (btn) {
+      e.stopPropagation();
+      const sygnatura = btn.dataset.sygnatura;
+      handlePeriodChange(sygnatura);
+    }
+  });
+
+  // Edycja kosztow - przycisk Edytuj
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.costs-edit-btn');
+    if (btn) {
+      e.stopPropagation();
+      handleCostsEdit(btn.dataset.sygnatura);
+    }
+  });
+
+  // Edycja kosztow - przycisk Zapisz
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.costs-save-btn');
+    if (btn) {
+      e.stopPropagation();
+      handleCostsSave(btn.dataset.sygnatura);
+    }
+  });
+
+  // Edycja kosztow - przycisk Anuluj
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.costs-cancel-btn');
+    if (btn) {
+      e.stopPropagation();
+      handleCostsCancel(btn.dataset.sygnatura);
+    }
+  });
+
   // Rozwijanie szczegolow aukcji w sekcji 30 dni
   document.addEventListener('click', (e) => {
     const header = e.target.closest('.offer-header');
@@ -395,6 +432,20 @@ function handleSummary30DaysExpand(header) {
   const isExpanded = content.style.display !== 'none';
   content.style.display = isExpanded ? 'none' : 'block';
   icon.textContent = isExpanded ? '▶' : '▼';
+
+  // Przy pierwszym rozwinieciu — zainicjuj state z danych glownego jsona
+  if (!isExpanded) {
+    const sygnatura = section.dataset.sygnatura;
+    if (sygnatura && !productPeriodState.has(sygnatura)) {
+      const product = processedData.products.find(p => p.sygnatura === sygnatura);
+      if (product) {
+        productPeriodState.set(sygnatura, {
+          periodData: product.summary_last_30_days || null,
+          costs: product.product_costs || null,
+        });
+      }
+    }
+  }
 }
 
 /**
@@ -747,6 +798,145 @@ function scrollToProductAndHighlight(sygnatura) {
   setTimeout(() => {
     productRow.classList.add('highlight');
   }, 500);
+}
+
+// ============================================
+// OKRES I KOSZTY PRODUKTU
+// ============================================
+
+// Przechowuje aktualnie zaladowane dane i koszty per produkt
+const productPeriodState = new Map();
+
+/**
+ * Obsluga zmiany okresu - pobiera dane z backendu
+ */
+async function handlePeriodChange(sygnatura) {
+  const section = document.querySelector(`.summary-30-days[data-sygnatura="${sygnatura}"]`);
+  if (!section) return;
+
+  const yearSelect = section.querySelector('.period-year-select');
+  const monthSelect = section.querySelector('.period-month-select');
+  const container = section.querySelector('.period-data-container');
+  const loadBtn = section.querySelector('.period-load-btn');
+
+  const year = parseInt(yearSelect.value);
+  const month = parseInt(monthSelect.value);
+
+  // Loading state
+  loadBtn.disabled = true;
+  loadBtn.textContent = 'Ladowanie...';
+  container.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--text-muted);">Ladowanie danych...</div>';
+
+  try {
+    const data = await fetchProductPeriodData(sygnatura, year, month);
+    data._sygnatura = sygnatura;
+
+    // Store state
+    const state = productPeriodState.get(sygnatura) || {};
+    state.periodData = data;
+    state.costs = data.product_costs || state.costs || null;
+    productPeriodState.set(sygnatura, state);
+
+    // Update costs section
+    const costsSection = section.querySelector('.product-costs-section');
+    if (costsSection) {
+      costsSection.innerHTML = renderProductCostsView(sygnatura, state.costs);
+    }
+
+    // Update period selector with available periods
+    if (data.available_periods) {
+      const selectorContainer = section.querySelector('.period-selector');
+      if (selectorContainer) {
+        selectorContainer.outerHTML = renderPeriodSelector(sygnatura, data.available_periods, year, month);
+      }
+    }
+
+    // Render period data
+    container.innerHTML = renderPeriodData(data, state.costs);
+
+  } catch (error) {
+    container.innerHTML = '<div class="empty-30-days" style="color: var(--danger);">Blad ladowania danych dla wybranego okresu</div>';
+    renderToast('Nie udalo sie zaladowac danych okresu', 'error');
+  } finally {
+    const newLoadBtn = section.querySelector('.period-load-btn');
+    if (newLoadBtn) {
+      newLoadBtn.disabled = false;
+      newLoadBtn.textContent = 'Zaladuj';
+    }
+  }
+}
+
+/**
+ * Obsluga edycji kosztow - przelacza na tryb edycji
+ */
+function handleCostsEdit(sygnatura) {
+  const section = document.querySelector(`.product-costs-section[data-sygnatura="${sygnatura}"]`);
+  if (!section) return;
+
+  const state = productPeriodState.get(sygnatura) || {};
+  section.innerHTML = renderProductCostsEdit(sygnatura, state.costs);
+}
+
+/**
+ * Obsluga zapisu kosztow
+ */
+async function handleCostsSave(sygnatura) {
+  const section = document.querySelector(`.product-costs-section[data-sygnatura="${sygnatura}"]`);
+  if (!section) return;
+
+  const inputs = section.querySelectorAll('.costs-input');
+  const costs = {};
+  inputs.forEach(input => {
+    const field = input.dataset.field;
+    const val = input.value.trim();
+    costs[field] = val === '' ? null : parseFloat(val);
+  });
+
+  const saveBtn = section.querySelector('.costs-save-btn');
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Zapisywanie...';
+  }
+
+  const success = await saveProductCosts(sygnatura, costs);
+
+  if (success) {
+    // Update state
+    const state = productPeriodState.get(sygnatura) || {};
+    state.costs = costs;
+    productPeriodState.set(sygnatura, state);
+
+    // Re-render costs view
+    section.innerHTML = renderProductCostsView(sygnatura, costs);
+
+    // Re-render period data if loaded
+    if (state.periodData) {
+      const container = document.querySelector(`.period-data-container[data-sygnatura="${sygnatura}"]`);
+      if (container) {
+        state.periodData._sygnatura = sygnatura;
+        container.innerHTML = renderPeriodData(state.periodData, costs);
+      }
+    }
+
+    renderToast('Koszty produktu zapisane', 'success');
+  } else {
+    if (saveBtn) {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Zapisz';
+    }
+    renderToast('Blad zapisu kosztow produktu', 'error');
+  }
+}
+
+/**
+ * Obsluga anulowania edycji kosztow
+ */
+function handleCostsCancel(sygnatura) {
+  const section = document.querySelector(`.product-costs-section[data-sygnatura="${sygnatura}"]`);
+  if (!section) return;
+
+  const state = productPeriodState.get(sygnatura) || {};
+  section.innerHTML = renderProductCostsView(sygnatura, state.costs);
 }
 
 // Utworz particles przy starcie

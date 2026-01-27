@@ -3,6 +3,9 @@
    Ladowanie i przetwarzanie danych
    =========================================== */
 
+// Cache danych okresowych per produkt: klucz = "sygnatura-year-month"
+const productPeriodCache = new Map();
+
 // Stan danych
 let rawData = [];
 let processedData = {
@@ -636,4 +639,136 @@ function classifyAllProducts(products) {
   classified.phaseOut = classified.phaseOut.slice(0, maxPerCard);
 
   return classified;
+}
+
+// ============================================
+// DANE OKRESOWE PRODUKTU
+// ============================================
+
+/**
+ * Pobiera dane produktu za wybrany okres (miesiac/rok)
+ * @param {string} sygnatura
+ * @param {number} year
+ * @param {number} month - 0 = caly rok, 1-12 = konkretny miesiac
+ * @returns {Promise<Object>}
+ */
+async function fetchProductPeriodData(sygnatura, year, month) {
+  const cacheKey = `${sygnatura}-${year}-${month}`;
+  if (productPeriodCache.has(cacheKey)) {
+    return productPeriodCache.get(cacheKey);
+  }
+
+  try {
+    const url = `${CONFIG.WEBHOOK_PRODUCT_PERIOD}?sygnatura=${encodeURIComponent(sygnatura)}&year=${year}&month=${month}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    productPeriodCache.set(cacheKey, data);
+    return data;
+  } catch (error) {
+    console.error('Blad pobierania danych okresowych:', error);
+    throw error;
+  }
+}
+
+/**
+ * Zapisuje koszty produktu przez webhook
+ * @param {string} sygnatura
+ * @param {Object} costs - { purchase_price_gross, vat_rate, income_tax_rate, storage_cost_per_unit }
+ * @returns {Promise<boolean>}
+ */
+async function saveProductCosts(sygnatura, costs) {
+  try {
+    const response = await fetch(CONFIG.WEBHOOK_UPDATE_PRODUCT_COSTS, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sygnatura,
+        ...costs,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Invalidate cache for this product (all periods)
+    for (const key of productPeriodCache.keys()) {
+      if (key.startsWith(sygnatura + '-')) {
+        const cached = productPeriodCache.get(key);
+        if (cached) {
+          cached.product_costs = { ...costs };
+        }
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Blad zapisu kosztow produktu:', error);
+    return false;
+  }
+}
+
+/**
+ * Oblicza rozszerzone metryki finansowe
+ * @param {Object} params - { qty, revenue, suc, fsf, purchase_gross, vat_rate, tax_rate, storage_unit }
+ * @returns {Object|null} - null jesli brak kosztow
+ */
+function calculateExtendedMetrics({ qty, revenue, suc, fsf, purchase_gross, vat_rate, tax_rate, storage_unit }) {
+  if (purchase_gross == null || qty === 0) return null;
+
+  const vatRate = vat_rate / 100;
+  const taxRate = tax_rate / 100;
+  const storageUnit = storage_unit || 0;
+
+  const vatSales = revenue * (vatRate / (1 + vatRate));
+  const vatPurchase = qty * (purchase_gross * (vatRate / (1 + vatRate)));
+  const vatToPay = vatSales - vatPurchase;
+  const salesNet = revenue - vatSales;
+  const purchaseNet = (purchase_gross / (1 + vatRate)) * qty;
+  const commissionTotal = Math.abs(suc) + Math.abs(fsf);
+  const storageCost = storageUnit * qty;
+  const taxableIncome = salesNet - purchaseNet - commissionTotal - storageCost;
+  const incomeTax = Math.max(0, taxableIncome * taxRate);
+  const totalCosts = purchaseNet + commissionTotal + storageCost + incomeTax + vatToPay;
+  const netProfit = salesNet - totalCosts;
+  const netProfitPerUnit = netProfit / qty;
+  const netMargin = salesNet > 0 ? (netProfit / salesNet) * 100 : 0;
+
+  return {
+    vatSales,
+    vatPurchase,
+    vatToPay,
+    salesNet,
+    purchaseNet,
+    commissionTotal,
+    storageCost,
+    incomeTax,
+    totalCosts,
+    netProfit,
+    netProfitPerUnit,
+    netMargin,
+  };
+}
+
+/**
+ * Oblicza rozszerzone metryki per aukcja
+ * @param {Object} offer - dane aukcji z by_offer
+ * @param {Object} costs - product_costs
+ * @returns {Object|null}
+ */
+function calculateOfferExtendedMetrics(offer, costs) {
+  if (!costs || costs.purchase_price_gross == null) return null;
+
+  return calculateExtendedMetrics({
+    qty: offer.sold_quantity,
+    revenue: offer.revenue,
+    suc: offer.commission_suc,
+    fsf: offer.commission_fsf,
+    purchase_gross: costs.purchase_price_gross,
+    vat_rate: costs.vat_rate ?? CONFIG.DEFAULT_VAT_RATE,
+    tax_rate: costs.income_tax_rate ?? CONFIG.DEFAULT_INCOME_TAX_RATE,
+    storage_unit: costs.storage_cost_per_unit,
+  });
 }
